@@ -1,0 +1,39 @@
+{
+  "name": "telegram-bot-platform",
+  "version": "0.2.0",
+  "private": true,
+  "description": "Lightweight Telegram bot with SQLite and встроенной admin panel.",
+  "license": "UNLICENSED",
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "start": "node dist/app/main.js",
+    "start:test": "node dist/app/main.js --profile=test",
+    "start:dev": "tsx watch app/main.ts",
+    "start:dev:test": "tsx watch app/main.ts --profile=test",
+    "dev:local": "npm run start:dev",
+    "db:init": "tsx app/scripts/init-db.ts",
+    "db:init:test": "tsx app/scripts/init-db.ts --profile=test",
+    "reminders:run": "tsx app/scripts/run-reminders.ts",
+    "reminders:run:test": "tsx app/scripts/run-reminders.ts --profile=test",
+    "import:legacy": "tsx app/scripts/import-legacy-data.ts",
+    "import:legacy:test": "tsx app/scripts/import-legacy-data.ts --profile=test",
+    "setup:local": "npm run db:init",
+    "setup:test": "npm run db:init:test",
+    "deploy:local": "npm install && npm run build && npm run db:init",
+    "lint": "tsc --noEmit",
+    "format": "prettier --write ."
+  },
+  "dependencies": {
+    "@fastify/formbody": "^8.0.2",
+    "dotenv": "^16.6.1",
+    "fastify": "^5.3.3",
+    "grammy": "^1.38.3",
+    "zod": "^3.24.4"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "prettier": "^3.5.3",
+    "tsx": "^4.20.3",
+    "typescript": "^5.8.3"
+  }
+}
