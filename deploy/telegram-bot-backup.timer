@@ -1,0 +1,11 @@
+[Unit]
+Description=Run Telegram Bot DB backup daily
+
+[Timer]
+OnCalendar=*-*-* 03:30:00
+Persistent=true
+Unit=telegram-bot-backup.service
+
+[Install]
+WantedBy=timers.target
+

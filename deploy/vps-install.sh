@@ -1,0 +1,170 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+REPO_URL="${REPO_URL:-https://github.com/JusteRYT/TelegramBot.git}"
+BRANCH="${BRANCH:-main}"
+APP_DIR="${APP_DIR:-/opt/telegram-bot}"
+PROFILE="${PROFILE:-default}" # default | test
+SERVICE_NAME="${SERVICE_NAME:-telegram-bot}"
+BACKUP_SERVICE_NAME="${BACKUP_SERVICE_NAME:-telegram-bot-backup}"
+NODE_MAJOR="${NODE_MAJOR:-22}"
+
+if [[ "${EUID}" -ne 0 ]]; then
+  exec sudo -E bash "$0" "$@"
+fi
+
+RUN_USER="${SUDO_USER:-root}"
+if [[ "${RUN_USER}" == "root" ]]; then
+  RUN_HOME="/root"
+else
+  RUN_HOME="$(getent passwd "${RUN_USER}" | cut -d: -f6)"
+fi
+
+echo "[1/8] Installing base packages..."
+apt-get update -y
+apt-get install -y git curl ca-certificates rsync
+
+if ! command -v node >/dev/null 2>&1; then
+  echo "[2/8] Installing Node.js ${NODE_MAJOR}..."
+  curl -fsSL "https://deb.nodesource.com/setup_${NODE_MAJOR}.x" | bash -
+  apt-get install -y nodejs
+else
+  echo "[2/8] Node.js already installed: $(node -v)"
+fi
+
+echo "[3/8] Preparing app directory..."
+mkdir -p "${APP_DIR}"
+chown -R "${RUN_USER}:${RUN_USER}" "${APP_DIR}"
+
+if [[ -d "${APP_DIR}/.git" ]]; then
+  echo "[4/8] Updating existing repository..."
+  sudo -u "${RUN_USER}" git -C "${APP_DIR}" fetch --all --prune
+  sudo -u "${RUN_USER}" git -C "${APP_DIR}" checkout "${BRANCH}"
+  sudo -u "${RUN_USER}" git -C "${APP_DIR}" pull --ff-only origin "${BRANCH}"
+else
+  echo "[4/8] Cloning repository..."
+  sudo -u "${RUN_USER}" git clone --branch "${BRANCH}" "${REPO_URL}" "${APP_DIR}"
+fi
+
+cd "${APP_DIR}"
+
+ENV_FILE=".env"
+if [[ "${PROFILE}" != "default" ]]; then
+  ENV_FILE=".env.${PROFILE}"
+fi
+
+if [[ ! -f "${ENV_FILE}" ]]; then
+  echo "[5/8] Creating ${ENV_FILE} from .env.example..."
+  cp .env.example "${ENV_FILE}"
+  chown "${RUN_USER}:${RUN_USER}" "${ENV_FILE}"
+fi
+
+set_env_value() {
+  local key="$1"
+  local value="$2"
+  if [[ -z "${value}" ]]; then
+    return
+  fi
+
+  if grep -qE "^${key}=" "${ENV_FILE}"; then
+    sed -i "s|^${key}=.*|${key}=${value}|g" "${ENV_FILE}"
+  else
+    echo "${key}=${value}" >> "${ENV_FILE}"
+  fi
+}
+
+# Optional inline env overrides for fully unattended deploy.
+set_env_value "TELEGRAM_BOT_TOKEN" "${TELEGRAM_BOT_TOKEN:-}"
+set_env_value "TELEGRAM_ALLOWED_ADMIN_IDS" "${TELEGRAM_ALLOWED_ADMIN_IDS:-}"
+set_env_value "TELEGRAM_BOT_USERNAME" "${TELEGRAM_BOT_USERNAME:-}"
+set_env_value "TELEGRAM_GROUP_INVITE_URL" "${TELEGRAM_GROUP_INVITE_URL:-}"
+set_env_value "TELEGRAM_CANDIDATE_BOT_USERNAME" "${TELEGRAM_CANDIDATE_BOT_USERNAME:-}"
+set_env_value "TELEGRAM_CANDIDATE_BOT_API_URL" "${TELEGRAM_CANDIDATE_BOT_API_URL:-}"
+set_env_value "MAIN_CHAT_ID" "${MAIN_CHAT_ID:-}"
+set_env_value "GENERAL_CHAT_ID" "${GENERAL_CHAT_ID:-}"
+set_env_value "ANNOUNCEMENT_TOPIC_ID" "${ANNOUNCEMENT_TOPIC_ID:-}"
+set_env_value "ADMIN_CHAT_ID" "${ADMIN_CHAT_ID:-}"
+set_env_value "ADMIN_TOPIC_ID" "${ADMIN_TOPIC_ID:-}"
+set_env_value "DATABASE_PATH" "${DATABASE_PATH:-}"
+set_env_value "BACKUP_DIR" "${BACKUP_DIR:-}"
+set_env_value "BACKUP_RETENTION_DAYS" "${BACKUP_RETENTION_DAYS:-}"
+set_env_value "ADMIN_USERNAME" "${ADMIN_USERNAME:-}"
+set_env_value "ADMIN_PASSWORD" "${ADMIN_PASSWORD:-}"
+
+chown "${RUN_USER}:${RUN_USER}" "${ENV_FILE}"
+
+echo "[6/8] Installing dependencies + build..."
+sudo -u "${RUN_USER}" npm install
+sudo -u "${RUN_USER}" npm run build
+
+echo "[7/8] Running DB init for profile=${PROFILE}..."
+if [[ "${PROFILE}" == "default" ]]; then
+  sudo -u "${RUN_USER}" npm run db:init
+  START_CMD="/usr/bin/npm start"
+  BACKUP_CMD="/usr/bin/npm run backup:db"
+else
+  sudo -u "${RUN_USER}" npm run "db:init:${PROFILE}"
+  START_CMD="/usr/bin/npm run start:${PROFILE}"
+  BACKUP_CMD="/usr/bin/npm run backup:db:${PROFILE}"
+fi
+
+echo "[8/8] Installing systemd services..."
+cat > "/etc/systemd/system/${SERVICE_NAME}.service" <<EOF
+[Unit]
+Description=Telegram Bot Platform
+After=network.target
+
+[Service]
+Type=simple
+User=${RUN_USER}
+WorkingDirectory=${APP_DIR}
+ExecStart=${START_CMD}
+Restart=always
+RestartSec=5
+Environment=NODE_ENV=production
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+cat > "/etc/systemd/system/${BACKUP_SERVICE_NAME}.service" <<EOF
+[Unit]
+Description=Telegram Bot SQLite Backup
+After=network.target
+
+[Service]
+Type=oneshot
+User=${RUN_USER}
+WorkingDirectory=${APP_DIR}
+ExecStart=${BACKUP_CMD}
+EOF
+
+cat > "/etc/systemd/system/${BACKUP_SERVICE_NAME}.timer" <<EOF
+[Unit]
+Description=Run Telegram Bot DB backup daily
+
+[Timer]
+OnCalendar=*-*-* 03:30:00
+Persistent=true
+Unit=${BACKUP_SERVICE_NAME}.service
+
+[Install]
+WantedBy=timers.target
+EOF
+
+systemctl daemon-reload
+systemctl enable --now "${SERVICE_NAME}.service"
+systemctl enable --now "${BACKUP_SERVICE_NAME}.timer"
+systemctl restart "${SERVICE_NAME}.service"
+
+echo
+echo "Deployment complete."
+echo "- Service: ${SERVICE_NAME}.service"
+echo "- Backup timer: ${BACKUP_SERVICE_NAME}.timer"
+echo "- Env file: ${APP_DIR}/${ENV_FILE}"
+echo
+echo "Useful commands:"
+echo "  systemctl status ${SERVICE_NAME} --no-pager"
+echo "  journalctl -u ${SERVICE_NAME} -f"
+echo "  systemctl list-timers | grep ${BACKUP_SERVICE_NAME}"
+echo "  systemctl start ${BACKUP_SERVICE_NAME}.service"

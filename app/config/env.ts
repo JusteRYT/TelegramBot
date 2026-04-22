@@ -27,6 +27,8 @@ const envSchema = z.object({
   ADMIN_CHAT_ID: z.coerce.number().default(0),
   ADMIN_TOPIC_ID: z.coerce.number().default(0),
   DATABASE_PATH: z.string().min(1).default('./data/app.db'),
+  BACKUP_DIR: z.string().min(1).default('./backups'),
+  BACKUP_RETENTION_DAYS: z.coerce.number().int().positive().default(7),
   ADMIN_USERNAME: z.string().min(1).default('admin'),
   ADMIN_PASSWORD: z.string().min(1),
 });
