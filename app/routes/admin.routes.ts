@@ -115,7 +115,7 @@ export async function registerAdminRoutes(app: FastifyInstance) {
       firstName: normalizeNullableText(body.first_name),
       lastName: normalizeNullableText(body.last_name),
       userStatus: normalizeUserStatus(body.user_status) ?? 'Кандидат',
-      lastGameAt: normalizeNullableText(body.last_game_at),
+      lastGameAt: parseDateTimeLocal(body.last_game_at) ?? normalizeNullableText(body.last_game_at),
       warningsCount: parseNonNegativeInt(body.warnings_count) ?? 0,
       gamesCount: parseNonNegativeInt(body.games_count) ?? 0,
       isAdmin: body.is_admin === '1',
@@ -460,6 +460,7 @@ export async function registerAdminRoutes(app: FastifyInstance) {
                   <th>Username</th>
                   <th>Имя</th>
                   <th>Фамилия</th>
+                  <th>В базе с</th>
                   <th>Статус</th>
                   <th>Last game</th>
                   <th>Warn</th>
@@ -479,6 +480,7 @@ export async function registerAdminRoutes(app: FastifyInstance) {
                           <td><input name="username" value="${escapeAttr(user.username ?? '')}" /></td>
                           <td><input name="first_name" value="${escapeAttr(user.first_name ?? '')}" /></td>
                           <td><input name="last_name" value="${escapeAttr(user.last_name ?? '')}" /></td>
+                          <td class="nowrap">${escapeHtml(formatHumanDate(user.created_at))}</td>
                           <td>
                             <select name="user_status">
                               ${selectOptionLabel(user.user_status, 'Не зарегистрирован', 'Не зарегистрирован')}
@@ -488,7 +490,7 @@ export async function registerAdminRoutes(app: FastifyInstance) {
                               ${selectOptionLabel(user.user_status, 'Бан', 'Бан')}
                             </select>
                           </td>
-                          <td><input name="last_game_at" value="${escapeAttr(user.last_game_at ?? '')}" /></td>
+                          <td><input type="datetime-local" name="last_game_at" value="${escapeAttr(toDateTimeLocal(user.last_game_at ?? ''))}" /></td>
                           <td><input name="warnings_count" value="${escapeAttr(String(user.warnings_count ?? 0))}" /></td>
                           <td><input name="games_count" value="${escapeAttr(String(user.games_count ?? 0))}" /></td>
                           <td>
@@ -700,7 +702,7 @@ export async function registerAdminRoutes(app: FastifyInstance) {
                               ${selectOptionLabel(item.status, 'CANCELLED', 'Отменен')}
                             </select>
                           </td>
-                          <td>${escapeHtml(item.created_at)}</td>
+                          <td>${escapeHtml(formatHumanDate(item.created_at))}</td>
                           <td style="min-width: 170px;">
                             <button type="submit">Сохранить</button>
                             <button
@@ -754,6 +756,23 @@ function toDateTimeLocal(value: string) {
   const hours = String(date.getHours()).padStart(2, '0');
   const minutes = String(date.getMinutes()).padStart(2, '0');
   return `${year}-${month}-${day}T${hours}:${minutes}`;
+}
+
+function formatHumanDate(value: string) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return value;
+  }
+
+  return new Intl.DateTimeFormat('ru-RU', {
+    timeZone: 'Europe/Moscow',
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  }).format(date) + ' МСК';
 }
 
 function parseNullableInt(value?: string) {

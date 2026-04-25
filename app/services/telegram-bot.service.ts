@@ -91,6 +91,10 @@ export class TelegramBotService {
       }
 
       if (this.isAdminContext(ctx.chat.id, ctx.message?.message_thread_id)) {
+        if (!this.hasAdminFlag(user)) {
+          await ctx.reply('⛔ Команда доступна только администраторам.');
+          return;
+        }
         await this.adminCommands.handleHelp(ctx as unknown as BotContextLike);
       } else if (this.isPublicAllowed(ctx.chat.id, ctx.chat.type, ctx.message?.message_thread_id)) {
         await this.publicCommands.handleHelp(ctx as unknown as BotContextLike);
@@ -164,7 +168,7 @@ export class TelegramBotService {
 
     this.bot.command('all', async (ctx) => {
       const user = this.syncUser(ctx.from);
-      if (!user || !this.isAdminContext(ctx.chat.id, ctx.message?.message_thread_id)) {
+      if (!this.canUseAdminCommands(user, ctx.chat.id, ctx.message?.message_thread_id)) {
         return;
       }
 
@@ -173,7 +177,7 @@ export class TelegramBotService {
 
     this.bot.command('create', async (ctx) => {
       const user = this.syncUser(ctx.from);
-      if (!user || !this.isAdminContext(ctx.chat.id, ctx.message?.message_thread_id)) {
+      if (!this.canUseAdminCommands(user, ctx.chat.id, ctx.message?.message_thread_id)) {
         return;
       }
 
@@ -182,7 +186,7 @@ export class TelegramBotService {
 
     this.bot.command('approve', async (ctx) => {
       const user = this.syncUser(ctx.from);
-      if (!user || !this.isAdminContext(ctx.chat.id, ctx.message?.message_thread_id)) {
+      if (!this.canUseAdminCommands(user, ctx.chat.id, ctx.message?.message_thread_id)) {
         return;
       }
 
@@ -191,7 +195,7 @@ export class TelegramBotService {
 
     this.bot.command('sheets', async (ctx) => {
       const user = this.syncUser(ctx.from);
-      if (!user || !this.isAdminContext(ctx.chat.id, ctx.message?.message_thread_id)) {
+      if (!this.canUseAdminCommands(user, ctx.chat.id, ctx.message?.message_thread_id)) {
         return;
       }
 
@@ -200,7 +204,7 @@ export class TelegramBotService {
 
     this.bot.command('edit', async (ctx) => {
       const user = this.syncUser(ctx.from);
-      if (!user || !this.isAdminContext(ctx.chat.id, ctx.message?.message_thread_id)) {
+      if (!this.canUseAdminCommands(user, ctx.chat.id, ctx.message?.message_thread_id)) {
         return;
       }
 
@@ -209,7 +213,7 @@ export class TelegramBotService {
 
     this.bot.command('cancel', async (ctx) => {
       const user = this.syncUser(ctx.from);
-      if (!user || !this.isAdminContext(ctx.chat.id, ctx.message?.message_thread_id)) {
+      if (!this.canUseAdminCommands(user, ctx.chat.id, ctx.message?.message_thread_id)) {
         return;
       }
 
@@ -218,7 +222,7 @@ export class TelegramBotService {
 
     this.bot.command('delete', async (ctx) => {
       const user = this.syncUser(ctx.from);
-      if (!user || !this.isAdminContext(ctx.chat.id, ctx.message?.message_thread_id)) {
+      if (!this.canUseAdminCommands(user, ctx.chat.id, ctx.message?.message_thread_id)) {
         return;
       }
 
@@ -227,7 +231,7 @@ export class TelegramBotService {
 
     this.bot.command('start_now', async (ctx) => {
       const user = this.syncUser(ctx.from);
-      if (!user || !this.isAdminContext(ctx.chat.id, ctx.message?.message_thread_id)) {
+      if (!this.canUseAdminCommands(user, ctx.chat.id, ctx.message?.message_thread_id)) {
         return;
       }
 
@@ -249,7 +253,7 @@ export class TelegramBotService {
 
     this.bot.command('uinfo', async (ctx) => {
       const user = this.syncUser(ctx.from);
-      if (!user || !this.isAdminContext(ctx.chat.id, ctx.message?.message_thread_id)) {
+      if (!this.canUseAdminCommands(user, ctx.chat.id, ctx.message?.message_thread_id)) {
         return;
       }
 
@@ -258,7 +262,7 @@ export class TelegramBotService {
 
     this.bot.command('uwarn', async (ctx) => {
       const user = this.syncUser(ctx.from);
-      if (!user || !this.isAdminContext(ctx.chat.id, ctx.message?.message_thread_id)) {
+      if (!this.canUseAdminCommands(user, ctx.chat.id, ctx.message?.message_thread_id)) {
         return;
       }
 
@@ -268,7 +272,7 @@ export class TelegramBotService {
 
     this.bot.command('uban', async (ctx) => {
       const user = this.syncUser(ctx.from);
-      if (!user || !this.isAdminContext(ctx.chat.id, ctx.message?.message_thread_id)) {
+      if (!this.canUseAdminCommands(user, ctx.chat.id, ctx.message?.message_thread_id)) {
         return;
       }
 
@@ -278,7 +282,7 @@ export class TelegramBotService {
 
     this.bot.command('uunban', async (ctx) => {
       const user = this.syncUser(ctx.from);
-      if (!user || !this.isAdminContext(ctx.chat.id, ctx.message?.message_thread_id)) {
+      if (!this.canUseAdminCommands(user, ctx.chat.id, ctx.message?.message_thread_id)) {
         return;
       }
 
@@ -287,7 +291,7 @@ export class TelegramBotService {
 
     this.bot.command('ureview', async (ctx) => {
       const user = this.syncUser(ctx.from);
-      if (!user || !this.isAdminContext(ctx.chat.id, ctx.message?.message_thread_id)) {
+      if (!this.canUseAdminCommands(user, ctx.chat.id, ctx.message?.message_thread_id)) {
         return;
       }
 
@@ -296,7 +300,7 @@ export class TelegramBotService {
 
     this.bot.command('uapprove', async (ctx) => {
       const user = this.syncUser(ctx.from);
-      if (!user || !this.isAdminContext(ctx.chat.id, ctx.message?.message_thread_id)) {
+      if (!this.canUseAdminCommands(user, ctx.chat.id, ctx.message?.message_thread_id)) {
         return;
       }
 
@@ -305,7 +309,7 @@ export class TelegramBotService {
 
     this.bot.command('ugame', async (ctx) => {
       const user = this.syncUser(ctx.from);
-      if (!user || !this.isAdminContext(ctx.chat.id, ctx.message?.message_thread_id)) {
+      if (!this.canUseAdminCommands(user, ctx.chat.id, ctx.message?.message_thread_id)) {
         return;
       }
 
@@ -314,7 +318,7 @@ export class TelegramBotService {
 
     this.bot.command('uall', async (ctx) => {
       const user = this.syncUser(ctx.from);
-      if (!user || !this.isAdminContext(ctx.chat.id, ctx.message?.message_thread_id)) {
+      if (!this.canUseAdminCommands(user, ctx.chat.id, ctx.message?.message_thread_id)) {
         return;
       }
 
@@ -323,7 +327,7 @@ export class TelegramBotService {
 
     this.bot.command('uhelp', async (ctx) => {
       const user = this.syncUser(ctx.from);
-      if (!user || !this.isAdminContext(ctx.chat.id, ctx.message?.message_thread_id)) {
+      if (!this.canUseAdminCommands(user, ctx.chat.id, ctx.message?.message_thread_id)) {
         return;
       }
 
@@ -332,7 +336,7 @@ export class TelegramBotService {
 
     this.bot.command('uadd', async (ctx) => {
       const user = this.syncUser(ctx.from);
-      if (!user || !this.isAdminContext(ctx.chat.id, ctx.message?.message_thread_id)) {
+      if (!this.canUseAdminCommands(user, ctx.chat.id, ctx.message?.message_thread_id)) {
         return;
       }
 
@@ -341,7 +345,7 @@ export class TelegramBotService {
 
     this.bot.command('ulist', async (ctx) => {
       const user = this.syncUser(ctx.from);
-      if (!user || !this.isAdminContext(ctx.chat.id, ctx.message?.message_thread_id)) {
+      if (!this.canUseAdminCommands(user, ctx.chat.id, ctx.message?.message_thread_id)) {
         return;
       }
 
@@ -350,7 +354,7 @@ export class TelegramBotService {
 
     this.bot.command('uremove', async (ctx) => {
       const user = this.syncUser(ctx.from);
-      if (!user || !this.isAdminContext(ctx.chat.id, ctx.message?.message_thread_id)) {
+      if (!this.canUseAdminCommands(user, ctx.chat.id, ctx.message?.message_thread_id)) {
         return;
       }
 
@@ -404,6 +408,11 @@ export class TelegramBotService {
         return;
       }
 
+      if (!this.hasAdminFlag(user)) {
+        this.sessions.clear(ctx.from.id);
+        return;
+      }
+
       if ('threadId' in state && state.threadId !== null && state.threadId !== ctx.message.message_thread_id) {
         return;
       }
@@ -426,12 +435,15 @@ export class TelegramBotService {
       return null;
     }
 
+    const existing = this.users.findByTelegramId(user.id);
+    const isAdmin = Boolean(existing?.is_admin) || this.auth.isAdminTelegramId(user.id);
+
     return this.users.upsertByTelegram({
       telegramId: user.id,
       username: user.username ?? null,
       firstName: user.first_name ?? null,
       lastName: user.last_name ?? null,
-      isAdmin: this.auth.isAdminTelegramId(user.id),
+      isAdmin,
     });
   }
 
@@ -489,5 +501,17 @@ export class TelegramBotService {
       .split(/\s+/)
       .map((item) => item.trim())
       .filter((item) => item.startsWith('@'));
+  }
+
+  private hasAdminFlag(user: { is_admin: number } | null | undefined) {
+    return Boolean(user?.is_admin);
+  }
+
+  private canUseAdminCommands(
+    user: { is_admin: number } | null | undefined,
+    chatId: number,
+    threadId: number | undefined,
+  ) {
+    return this.hasAdminFlag(user) && this.isAdminContext(chatId, threadId);
   }
 }

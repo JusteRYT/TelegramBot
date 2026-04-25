@@ -421,6 +421,25 @@ export class AdminCommandService {
   }
 
   async handleCancel(ctx: BotContextLike, gameIdText: string) {
+    const input = gameIdText.trim();
+    if (!input) {
+      if (!ctx.from) {
+        return;
+      }
+
+      const state = this.sessions.get(ctx.from.id);
+      if (!state) {
+        await ctx.reply('ℹ️ Активной цепочки нет. Для отмены игры используйте <code>/cancel ID</code>.', {
+          parse_mode: 'HTML',
+        });
+        return;
+      }
+
+      this.sessions.clear(ctx.from.id);
+      await ctx.reply('🛑 Текущая цепочка действий отменена.');
+      return;
+    }
+
     const gameId = Number.parseInt(gameIdText, 10);
     const ok = !Number.isNaN(gameId) && this.games.cancelGame(gameId);
     if (ok) {
