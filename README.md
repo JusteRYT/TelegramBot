@@ -2,6 +2,27 @@
 
 TypeScript + SQLite Telegram-бот с веб-админкой (`/admin`), анонсами игр, регистрацией и модерацией пользователей.
 
+## Минимум Команд (VPS)
+
+1. Первый деплой (prod/default), скрипт сам спросит токен:
+```bash
+curl -fsSL https://raw.githubusercontent.com/JusteRYT/TelegramBot/main/deploy/vps-install.sh | sudo PROFILE=default bash
+```
+
+2. Обновление (если в GitHub есть новые коммиты):
+```bash
+curl -fsSL https://raw.githubusercontent.com/JusteRYT/TelegramBot/main/deploy/vps-update.sh | sudo PROFILE=default bash
+```
+
+3. Проверка статуса и логов:
+```bash
+sudo systemctl status telegram-bot --no-pager
+sudo journalctl -u telegram-bot -n 100 --no-pager
+```
+
+4. Админка:
+- `http://<SERVER_IP>:3000/admin`
+
 ## Быстрый запуск локально
 
 1. Установить зависимости:
