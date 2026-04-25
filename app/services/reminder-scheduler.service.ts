@@ -5,6 +5,7 @@ import { env } from '../config/env';
 import { AnnouncementService } from './announcement.service';
 import { ExternalValidationService } from './external-validation.service';
 import { GameService } from './game.service';
+import { LeaderboardService } from './leaderboard.service';
 
 export class ReminderSchedulerService {
   private timer: NodeJS.Timeout | null = null;
@@ -15,6 +16,7 @@ export class ReminderSchedulerService {
     private readonly announcements = new AnnouncementService(bot),
     private readonly games = new GameService(),
     private readonly externalValidation = new ExternalValidationService(),
+    private readonly leaderboard = new LeaderboardService(),
   ) {}
 
   start() {
@@ -41,6 +43,7 @@ export class ReminderSchedulerService {
     await this.processGameReminders();
     await this.processSheetReminders();
     await this.processInactivityReminders();
+    await this.processLeaderboardRefresh();
   }
 
   private async processGameReminders() {
@@ -137,6 +140,27 @@ export class ReminderSchedulerService {
         `Мы очень не хотим тебя терять! Заглядывай в канал с анонсами и записывайся на ближайшую игру, чтобы подтвердить свой статус игрока. 🎲✨`;
 
       await this.bot.api.sendMessage(user.id, text, { parse_mode: 'HTML' });
+    }
+  }
+
+  private async processLeaderboardRefresh() {
+    if (!env.LEADERBOARD_CHAT_ID || !env.LEADERBOARD_MSG_ID) {
+      return;
+    }
+
+    const now = this.toMoscowDate(new Date());
+    const slot = Math.floor(now.getMinutes() / 10);
+    const runKey = `leaderboard-${now.getFullYear()}-${now.getMonth()}-${now.getDate()}-${now.getHours()}-${slot}`;
+
+    if (this.lastRunKeys.has(runKey)) {
+      return;
+    }
+
+    this.lastRunKeys.add(runKey);
+    try {
+      await this.leaderboard.refreshMessage(this.bot);
+    } catch (error) {
+      console.error('Leaderboard refresh failed:', error);
     }
   }
 

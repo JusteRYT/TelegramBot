@@ -509,6 +509,22 @@ export class UserRepository {
       .all(...statuses, days) as Array<{ id: number; username: string }>;
   }
 
+  listForLeaderboard(limit = 20) {
+    return sqlite
+      .prepare(
+        `
+        SELECT id, username, games_count
+        FROM users
+        WHERE user_status NOT IN ('Бан', 'Не зарегистрирован')
+          AND games_count > 0
+          AND username IS NOT NULL
+        ORDER BY games_count DESC, updated_at ASC, id ASC
+        LIMIT ?
+      `,
+      )
+      .all(limit) as Array<{ id: number; username: string; games_count: number }>;
+  }
+
   listGroupedByStatus() {
     const rows = sqlite
       .prepare('SELECT * FROM users ORDER BY id ASC')
