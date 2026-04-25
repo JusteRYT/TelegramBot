@@ -59,6 +59,21 @@ if [[ ! -f "${ENV_FILE}" ]]; then
   chown "${RUN_USER}:${RUN_USER}" "${ENV_FILE}"
 fi
 
+current_token="$(grep -E '^TELEGRAM_BOT_TOKEN=' "${ENV_FILE}" | head -n1 | cut -d'=' -f2- || true)"
+if [[ -z "${TELEGRAM_BOT_TOKEN:-}" ]]; then
+  if [[ -n "${current_token}" && "${current_token}" != "replace_with_real_bot_token" ]]; then
+    TELEGRAM_BOT_TOKEN="${current_token}"
+  elif [[ -t 0 ]]; then
+    while [[ -z "${TELEGRAM_BOT_TOKEN:-}" ]]; do
+      read -r -p "Enter TELEGRAM_BOT_TOKEN: " TELEGRAM_BOT_TOKEN
+    done
+  else
+    echo "ERROR: TELEGRAM_BOT_TOKEN is empty and interactive input is unavailable."
+    echo "Pass token explicitly: TELEGRAM_BOT_TOKEN='...' sudo bash deploy/vps-install.sh"
+    exit 1
+  fi
+fi
+
 set_env_value() {
   local key="$1"
   local value="$2"

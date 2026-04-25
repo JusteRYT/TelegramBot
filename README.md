@@ -56,6 +56,8 @@ npm run start:dev:test
 curl -fsSL https://raw.githubusercontent.com/JusteRYT/TelegramBot/main/deploy/vps-install.sh | sudo bash
 ```
 
+Скрипт сам спросит `TELEGRAM_BOT_TOKEN` текстом (если он не передан через ENV и не задан в `.env`).
+
 По умолчанию:
 - repo: `https://github.com/JusteRYT/TelegramBot.git`
 - branch: `main`
@@ -201,6 +203,22 @@ npm install
 npm run build
 npm run db:init:test
 sudo systemctl restart telegram-bot
+```
+
+### One-command update (если есть новые коммиты в GitHub)
+
+Скрипт сам проверяет `origin/main`:
+- если обновлений нет — ничего не делает;
+- если есть — делает `pull`, `npm install`, `build`, `db:init`, перезапускает сервис.
+
+Запуск:
+```bash
+curl -fsSL https://raw.githubusercontent.com/JusteRYT/TelegramBot/main/deploy/vps-update.sh | sudo PROFILE=test bash
+```
+
+Для default-профиля:
+```bash
+curl -fsSL https://raw.githubusercontent.com/JusteRYT/TelegramBot/main/deploy/vps-update.sh | sudo PROFILE=default bash
 ```
 
 ## Где хранится БД
