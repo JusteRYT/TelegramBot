@@ -46,10 +46,9 @@ export class LeaderboardService {
     const lines = rows.map((row, index) => {
       const rank = this.getRank(row.games_count);
       const place = this.getPlaceBadge(index + 1);
-      const username = `@${row.username ?? 'unknown'}`.slice(0, 13).padEnd(13, ' ');
-      const rankName = rank.name.padEnd(10, ' ');
-      const games = String(row.games_count).padStart(2, ' ');
-      return `${place}${rank.emoji} ${username} │ ${rankName} │ ${games}`;
+      const username = `@${row.username ?? 'unknown'}`.slice(0, 13);
+      const games = String(row.games_count);
+      return `${place}${rank.emoji} ${username} │ ${rank.name} │ ${games}`;
     });
 
     const table = lines.length
@@ -58,7 +57,7 @@ export class LeaderboardService {
 
     return (
       `⚔️ <b>ЗАЛ ВЕЛИКИХ ПОБЕД 🏆</b>\n\n` +
-      `<pre>      Герой          Ранг         Игры\n${table}</pre>\n\n` +
+      `Герой │ Ранг │ Игры\n${table}\n\n` +
       `📈 Чтобы узнать свой прогресс, напиши боту в ЛС: /rank\n\n` +
       `🕒 Обновлено: ${this.formatMoscowDate(new Date())}`
     );
