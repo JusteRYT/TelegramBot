@@ -97,6 +97,10 @@ curl -fsSL https://raw.githubusercontent.com/JusteRYT/TelegramBot/main/deploy/vp
 - делает `npm install`, `npm run build`, `db:init`
 - поднимает `systemd` сервис бота
 - поднимает `systemd` timer для ежедневного backup
+- если целевая БД не найдена, может восстановить её из:
+  - `DB_SOURCE_PATH=/tmp/app.db`
+  - `DB_SOURCE_URL=https://.../app.db`
+  - или автоматически скопировать `data/app.test.db -> data/app.db` при `PROFILE=default`
 
 ### 1. Подготовка сервера
 
@@ -219,6 +223,47 @@ curl -fsSL https://raw.githubusercontent.com/JusteRYT/TelegramBot/main/deploy/vp
 Для default-профиля:
 ```bash
 curl -fsSL https://raw.githubusercontent.com/JusteRYT/TelegramBot/main/deploy/vps-update.sh | sudo PROFILE=default bash
+```
+
+## Перенос текущей БД на VPS
+
+Пример: переносишь локальную `app.test.db` в production `app.db`.
+
+1. Скопируй файл на сервер:
+```bash
+scp ./data/app.test.db user@server:/tmp/app.test.db
+```
+
+2. Запусти деплой с явным источником БД:
+```bash
+curl -fsSL https://raw.githubusercontent.com/JusteRYT/TelegramBot/main/deploy/vps-install.sh | sudo \
+  PROFILE=default \
+  DB_SOURCE_PATH=/tmp/app.test.db \
+  TELEGRAM_BOT_TOKEN='your_token' \
+  MAIN_CHAT_ID='-100...' \
+  ANNOUNCEMENT_TOPIC_ID='4' \
+  ADMIN_CHAT_ID='-100...' \
+  ADMIN_TOPIC_ID='797' \
+  bash
+```
+
+## Полное удаление бота с VPS
+
+Скрипт:
+```bash
+curl -fsSL -o vps-uninstall.sh https://raw.githubusercontent.com/JusteRYT/TelegramBot/main/deploy/vps-uninstall.sh
+chmod +x vps-uninstall.sh
+sudo ./vps-uninstall.sh
+```
+
+По умолчанию удаляет:
+- systemd сервис бота
+- backup service/timer
+- `/opt/telegram-bot` вместе с БД и бэкапами
+
+Если хочешь оставить данные:
+```bash
+sudo PURGE_DATA=0 ./vps-uninstall.sh
 ```
 
 ## Где хранится БД

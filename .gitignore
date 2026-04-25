@@ -8,3 +8,5 @@ coverage
 .turbo
 *.log
 backups
+*.db-wal
+*.db-shm

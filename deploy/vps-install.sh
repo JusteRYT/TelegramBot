@@ -8,6 +8,9 @@ PROFILE="${PROFILE:-default}" # default | test
 SERVICE_NAME="${SERVICE_NAME:-telegram-bot}"
 BACKUP_SERVICE_NAME="${BACKUP_SERVICE_NAME:-telegram-bot-backup}"
 NODE_MAJOR="${NODE_MAJOR:-22}"
+DB_SOURCE_PATH="${DB_SOURCE_PATH:-}"   # e.g. /tmp/app.db
+DB_SOURCE_URL="${DB_SOURCE_URL:-}"     # e.g. https://example.com/app.db
+MIGRATE_TEST_DB_TO_DEFAULT="${MIGRATE_TEST_DB_TO_DEFAULT:-1}"
 
 if [[ "${EUID}" -ne 0 ]]; then
   exec sudo -E bash "$0" "$@"
@@ -108,6 +111,39 @@ set_env_value "ADMIN_PASSWORD" "${ADMIN_PASSWORD:-}"
 
 chown "${RUN_USER}:${RUN_USER}" "${ENV_FILE}"
 
+resolve_db_path() {
+  local raw_db_path
+  raw_db_path="$(grep -E '^DATABASE_PATH=' "${ENV_FILE}" | head -n1 | cut -d'=' -f2- || true)"
+  if [[ -z "${raw_db_path}" ]]; then
+    raw_db_path="./data/app.db"
+  fi
+
+  if [[ "${raw_db_path}" = /* ]]; then
+    echo "${raw_db_path}"
+  else
+    echo "${APP_DIR}/${raw_db_path#./}"
+  fi
+}
+
+DB_PATH="$(resolve_db_path)"
+DB_DIR="$(dirname "${DB_PATH}")"
+mkdir -p "${DB_DIR}"
+chown -R "${RUN_USER}:${RUN_USER}" "${DB_DIR}"
+
+if [[ ! -f "${DB_PATH}" ]]; then
+  if [[ -n "${DB_SOURCE_PATH}" && -f "${DB_SOURCE_PATH}" ]]; then
+    echo "Restoring DB from local source: ${DB_SOURCE_PATH} -> ${DB_PATH}"
+    cp -f "${DB_SOURCE_PATH}" "${DB_PATH}"
+  elif [[ -n "${DB_SOURCE_URL}" ]]; then
+    echo "Downloading DB from URL: ${DB_SOURCE_URL}"
+    curl -fsSL "${DB_SOURCE_URL}" -o "${DB_PATH}"
+  elif [[ "${PROFILE}" == "default" && "${MIGRATE_TEST_DB_TO_DEFAULT}" == "1" && -f "${APP_DIR}/data/app.test.db" ]]; then
+    echo "Migrating existing test DB to default DB: data/app.test.db -> ${DB_PATH}"
+    cp -f "${APP_DIR}/data/app.test.db" "${DB_PATH}"
+  fi
+  chown "${RUN_USER}:${RUN_USER}" "${DB_PATH}" 2>/dev/null || true
+fi
+
 echo "[6/8] Installing dependencies + build..."
 sudo -u "${RUN_USER}" npm install
 sudo -u "${RUN_USER}" npm run build
@@ -177,6 +213,7 @@ echo "Deployment complete."
 echo "- Service: ${SERVICE_NAME}.service"
 echo "- Backup timer: ${BACKUP_SERVICE_NAME}.timer"
 echo "- Env file: ${APP_DIR}/${ENV_FILE}"
+echo "- DB path: ${DB_PATH}"
 echo
 echo "Useful commands:"
 echo "  systemctl status ${SERVICE_NAME} --no-pager"
