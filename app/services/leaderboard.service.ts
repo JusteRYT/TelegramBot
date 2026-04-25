@@ -47,23 +47,16 @@ export class LeaderboardService {
       const rank = this.getRank(row.games_count);
       const place = this.getPlaceBadge(index + 1);
       const username = `@${row.username ?? 'unknown'}`.slice(0, 13);
-      const games = String(row.games_count);
-      const heroCell = this.toCell(`${place}${rank.emoji} ${username}`, 22);
-      const rankCell = this.toCell(rank.name, 10);
-      const gamesCell = this.toCell(games, 4, true);
-      return `${heroCell} │ ${rankCell} │ ${gamesCell}`;
+      return `${place}${rank.emoji} ${username} — ${rank.name} • ${row.games_count}`;
     });
 
     const table = lines.length
       ? lines.join('\n')
       : '<i>Пока нет данных для таблицы лидеров.</i>';
 
-    const header =
-      `${this.toCell('Герой', 22)} │ ${this.toCell('Ранг', 10)} │ ${this.toCell('Игры', 4, true)}`;
-
     return (
       `⚔️ <b>ЗАЛ ВЕЛИКИХ ПОБЕД 🏆</b>\n\n` +
-      `${header}\n${table}\n\n` +
+      `${table}\n\n` +
       `📈 Чтобы узнать свой прогресс, напиши боту в ЛС: /rank\n\n` +
       `🕒 Обновлено: ${this.formatMoscowDate(new Date())}`
     );
@@ -102,13 +95,4 @@ export class LeaderboardService {
     return `${msk} МСК`;
   }
 
-  private toCell(value: string, width: number, alignRight = false) {
-    const normalized = value.trim();
-    if (normalized.length >= width) {
-      return normalized;
-    }
-
-    const padded = alignRight ? normalized.padStart(width, ' ') : normalized.padEnd(width, ' ');
-    return padded.replaceAll(' ', '\u00A0');
-  }
 }
