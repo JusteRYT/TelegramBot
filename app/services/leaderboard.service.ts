@@ -50,8 +50,8 @@ export class LeaderboardService {
       const games = String(row.games_count);
       const heroCell = this.toCell(`${place}${rank.emoji} ${username}`, 22);
       const rankCell = this.toCell(rank.name, 10);
-      const gamesCell = this.toCell(games, 2, true);
-      return `${heroCell}&nbsp;│&nbsp;${rankCell}&nbsp;│&nbsp;${gamesCell}`;
+      const gamesCell = this.toCell(games, 4, true);
+      return `${heroCell} │ ${rankCell} │ ${gamesCell}`;
     });
 
     const table = lines.length
@@ -59,7 +59,7 @@ export class LeaderboardService {
       : '<i>Пока нет данных для таблицы лидеров.</i>';
 
     const header =
-      `${this.toCell('Герой', 22)}&nbsp;│&nbsp;${this.toCell('Ранг', 10)}&nbsp;│&nbsp;${this.toCell('Игры', 2, true)}`;
+      `${this.toCell('Герой', 22)} │ ${this.toCell('Ранг', 10)} │ ${this.toCell('Игры', 4, true)}`;
 
     return (
       `⚔️ <b>ЗАЛ ВЕЛИКИХ ПОБЕД 🏆</b>\n\n` +
@@ -104,11 +104,11 @@ export class LeaderboardService {
 
   private toCell(value: string, width: number, alignRight = false) {
     const normalized = value.trim();
-    const trimmed =
-      normalized.length > width
-        ? normalized.slice(0, width)
-        : normalized;
-    const padded = alignRight ? trimmed.padStart(width, ' ') : trimmed.padEnd(width, ' ');
-    return padded.replaceAll(' ', '&nbsp;');
+    if (normalized.length >= width) {
+      return normalized;
+    }
+
+    const padded = alignRight ? normalized.padStart(width, ' ') : normalized.padEnd(width, ' ');
+    return padded.replaceAll(' ', '\u00A0');
   }
 }
