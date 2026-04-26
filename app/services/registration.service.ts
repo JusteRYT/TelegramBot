@@ -25,11 +25,7 @@ export class RegistrationService {
       return { ok: false as const, reason: 'ALREADY_REGISTERED' };
     }
 
-    const confirmedCount = this.registrations.countConfirmedByGame(gameId);
-    const nextStatus =
-      game.registration_limit && confirmedCount >= game.registration_limit
-        ? 'WAITLIST'
-        : 'CONFIRMED';
+    const nextStatus = 'WAITLIST';
 
     const registration = this.registrations.createOrRestore(gameId, userId, nextStatus);
     this.gameService.refreshStatus(gameId);

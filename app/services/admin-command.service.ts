@@ -558,11 +558,22 @@ export class AdminCommandService {
       return;
     }
 
+    const detailed = this.games.getDetailedById(state.gameId);
+    const activeRegistrations = detailed?.registrations.filter((item) => item.status !== 'CANCELLED') ?? [];
+    const approvedRegistrations = activeRegistrations.filter((_, index) => indices.includes(index));
+    const rejectedRegistrations = activeRegistrations.filter((_, index) => !indices.includes(index));
+
     const success = this.games.approveSelectedPlayers(state.gameId, indices);
     if (success) {
       await this.announcements.refreshGame(state.gameId);
+      await this.notifyApproveResults(state.gameId, approvedRegistrations, rejectedRegistrations);
       this.sessions.clear(ctx.from.id);
-      await ctx.reply('✅ Группа утверждена, анонс обновлен.');
+      await ctx.reply(
+        `✅ <b>Группа утверждена, анонс обновлен.</b>\n\n` +
+        `🟢 Приняты: <code>${approvedRegistrations.length}</code>\n` +
+        `🔴 Отклонены: <code>${rejectedRegistrations.length}</code>`,
+        { parse_mode: 'HTML' },
+      );
     }
   }
 
@@ -585,7 +596,7 @@ export class AdminCommandService {
     const result = this.games.markSheetsSubmitted(state.gameId, selected);
     this.sessions.clear(ctx.from.id);
     await this.notifyPlayersAboutApprovedSheets(state.gameId, selected);
-    await ctx.reply(result);
+    await ctx.reply(result, { parse_mode: 'HTML' });
   }
 
   private async notifyPlayersAboutApprovedSheets(gameId: number, usernames: string[]) {
@@ -616,10 +627,11 @@ export class AdminCommandService {
       }
 
       const text =
-        `✅ <b>Анкета принята</b>\n\n` +
+        `✅ <b>Анкета принята мастером</b>\n\n` +
         `🎮 Игра: ${gameLink ? `<a href="${gameLink}"><b>${detailed.title}</b></a>` : `<b>${detailed.title}</b>`}\n` +
         `🧙‍♂️ Мастер: ${detailed.gm_name ?? 'уточняется'}\n\n` +
-        `<i>Вы в составе, до встречи на игре!</i>`;
+        `📌 Статус: <b>анкета отмечена как сданная</b>\n\n` +
+        `<i>Отлично, вы полностью готовы к игре!</i>`;
 
       try {
         await this.announcements.sendPrivateMessage(registration.telegram_id, text, 'HTML');
@@ -632,6 +644,65 @@ export class AdminCommandService {
   private channelBaseUrl() {
     const cleanId = String(env.MAIN_CHAT_ID).replace('-100', '');
     return `https://t.me/c/${cleanId}`;
+  }
+
+  private async notifyApproveResults(
+    gameId: number,
+    approved: Array<{ telegram_id: number; username: string | null }>,
+    rejected: Array<{ telegram_id: number; username: string | null }>,
+  ) {
+    const game = this.games.getById(gameId);
+    if (!game) {
+      return;
+    }
+
+    const gameLink = game.announcement_message_id
+      ? `${this.channelBaseUrl()}/${game.announcement_message_id}${env.ANNOUNCEMENT_TOPIC_ID ? `?thread=${env.ANNOUNCEMENT_TOPIC_ID}` : ''}`
+      : null;
+
+    const approvedText =
+      `🎉 <b>Вы приняты в игру!</b>\n\n` +
+      `🎮 Игра: ${gameLink ? `<a href="${gameLink}"><b>${game.title}</b></a>` : `<b>${game.title}</b>`}\n` +
+      `🧙‍♂️ Мастер: ${game.gm_name ?? 'уточняется'}\n` +
+      `📅 Дата: <code>${this.formatDate(new Date(game.starts_at))}</code>\n` +
+      `⏰ Время: <code>${this.formatTime(new Date(game.starts_at))}</code> (МСК)\n\n` +
+      `📝 Пожалуйста, подготовьте анкету по примеру из <code>/guide</code> и отправьте ГМу.\n` +
+      `⚠️ Дедлайн: не позднее чем за <b>1 день до игры</b>.`;
+
+    const rejectedText =
+      `ℹ️ <b>Обновление по заявке на игру</b>\n\n` +
+      `🎮 Игра: <b>${game.title}</b>\n` +
+      `К сожалению, в этот состав вы не вошли.\n` +
+      `Следите за новыми анонсами — на следующую игру сможете записаться снова.`;
+
+    for (const player of approved) {
+      try {
+        await this.announcements.sendPrivateMessage(player.telegram_id, approvedText, 'HTML');
+      } catch (error) {
+        console.warn(`Failed to notify approved player ${player.telegram_id} for game #${gameId}:`, error);
+      }
+    }
+
+    for (const player of rejected) {
+      try {
+        await this.announcements.sendPrivateMessage(player.telegram_id, rejectedText, 'HTML');
+      } catch (error) {
+        console.warn(`Failed to notify rejected player ${player.telegram_id} for game #${gameId}:`, error);
+      }
+    }
+  }
+
+  private formatDate(value: Date) {
+    const day = String(value.getDate()).padStart(2, '0');
+    const month = String(value.getMonth() + 1).padStart(2, '0');
+    const year = value.getFullYear();
+    return `${day}.${month}.${year}`;
+  }
+
+  private formatTime(value: Date) {
+    const hours = String(value.getHours()).padStart(2, '0');
+    const minutes = String(value.getMinutes()).padStart(2, '0');
+    return `${hours}:${minutes}`;
   }
 
   private async handleEditInput(ctx: BotContextLike, state: EditInputValueState) {

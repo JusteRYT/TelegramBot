@@ -192,7 +192,7 @@ export class CallbackQueryService {
     await this.bot.api.answerCallbackQuery(callbackQueryId, {
       text: result.ok
         ? result.registration?.status === 'WAITLIST'
-          ? 'Места заняты, вы в листе ожидания.'
+          ? 'Заявка отправлена. Вы в листе ожидания до подтверждения мастером.'
           : 'Вы успешно записаны!'
         : {
             GAME_NOT_FOUND: 'Игра не найдена.',

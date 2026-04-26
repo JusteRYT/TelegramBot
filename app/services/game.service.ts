@@ -305,7 +305,12 @@ export class GameService {
       submittedSheetUsers: Array.from(updated).join(','),
     });
 
-    return `✅ Для игры #${gameId} отмечены: ${usernames.join(', ')}`;
+    const formattedPlayers = usernames.map((username, index) => `${index + 1}. ${username}`).join('\n');
+    return (
+      `✅ <b>Анкеты отмечены</b>\n\n` +
+      `🎮 Игра: <b>${game.title}</b> (#${gameId})\n` +
+      `👥 Отмечены как сдавшие:\n${formattedPlayers}`
+    );
   }
 
   private formatUpcomingSnippet(game: GameRecord) {
