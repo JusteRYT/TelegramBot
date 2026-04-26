@@ -458,18 +458,18 @@ export async function registerAdminRoutes(app: FastifyInstance) {
               --bg: #f6f9ff;
               --bg-soft: #e8f0ff;
               --surface: #ffffff;
-              --surface-2: #f9fbff;
-              --text: #18243a;
-              --muted: #607293;
-              --line: #d8e3f4;
+              --surface-2: #f2f5fb;
+              --text: #0f172a;
+              --muted: #475569;
+              --line: #cbd5e1;
               --accent: #2463eb;
-              --accent-soft: #e8f0ff;
+              --accent-soft: #e2e8f0;
               --danger: #d0342c;
               --success-bg: #e8f8ee;
               --success-line: #bce7ca;
               --success-text: #13653c;
               --shadow: 0 10px 30px rgba(20, 33, 60, 0.10);
-              --stripe: #f5f8ff;
+              --stripe: #eef2f7;
             }
             body[data-theme="dark"] {
               --bg: #0b1323;
@@ -555,7 +555,7 @@ export async function registerAdminRoutes(app: FastifyInstance) {
               border-collapse: separate;
               border-spacing: 0;
               min-width: 980px;
-              table-layout: fixed;
+              table-layout: auto;
               border: 1px solid var(--line);
               border-radius: 12px;
               overflow: hidden;
@@ -609,9 +609,11 @@ export async function registerAdminRoutes(app: FastifyInstance) {
             .btn-danger { background: var(--danger); }
             .mono { font-family: Consolas, monospace; }
             .small { font-size: 10px; color: var(--muted); margin-top: 2px; }
-            .row-actions { display: flex; gap: 6px; }
+            .row-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+            .row-actions button { min-width: 92px; }
             .nowrap { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
             .game-stack { display: grid; gap: 6px; }
+            .pair-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
             .new-entry {
               background: var(--surface-2);
               border: 1px dashed var(--line);
@@ -640,6 +642,7 @@ export async function registerAdminRoutes(app: FastifyInstance) {
             @media (max-width: 640px) {
               .new-entry-grid { grid-template-columns: 1fr; }
               .section-head { flex-direction: column; align-items: flex-start; }
+              .pair-grid { grid-template-columns: 1fr; }
             }
           </style>
         </head>
@@ -652,7 +655,6 @@ export async function registerAdminRoutes(app: FastifyInstance) {
             </div>
             <button type="button" id="themeToggle" class="theme-toggle">🌙 Тема</button>
           </div>
-          <p class="hint">Веб-морда для просмотра и редактирования записей БД. После изменения нажмите "Сохранить".</p>
           ${query.saved ? `<div class="ok">Изменения сохранены: ${escapeHtml(query.saved)}</div>` : ''}
 
           <div class="card">
@@ -727,6 +729,14 @@ export async function registerAdminRoutes(app: FastifyInstance) {
               </div>
             </form>
             <table>
+              <colgroup>
+                <col style="width: 70px;" />
+                <col style="width: 300px;" />
+                <col style="width: 220px;" />
+                <col style="width: 340px;" />
+                <col style="width: 300px;" />
+                <col style="width: 160px;" />
+              </colgroup>
               <thead>
                 <tr>
                   <th>ID</th>
@@ -747,19 +757,25 @@ export async function registerAdminRoutes(app: FastifyInstance) {
                           <td>
                             <div class="game-stack">
                             <input name="title" value="${escapeAttr(game.title)}" />
-                            <div class="small">type</div>
-                            <select name="type">
-                              ${selectOption(game.type, 'DND')}
-                              ${selectOption(game.type, 'MAFIA')}
-                              ${selectOption(game.type, 'OTHER')}
-                            </select>
-                            <div class="small">status</div>
-                            <select name="status">
-                              ${selectOptionLabel(game.status, 'OPEN', 'Идет набор')}
-                              ${selectOptionLabel(game.status, 'FULL', 'Группа собрана')}
-                              ${selectOptionLabel(game.status, 'DONE', 'Игра завершена')}
-                              ${selectOptionLabel(game.status, 'CANCELLED', 'Отменена')}
-                            </select>
+                            <div class="pair-grid">
+                              <div>
+                                <div class="small">type</div>
+                                <select name="type">
+                                  ${selectOption(game.type, 'DND')}
+                                  ${selectOption(game.type, 'MAFIA')}
+                                  ${selectOption(game.type, 'OTHER')}
+                                </select>
+                              </div>
+                              <div>
+                                <div class="small">status</div>
+                                <select name="status">
+                                  ${selectOptionLabel(game.status, 'OPEN', 'Идет набор')}
+                                  ${selectOptionLabel(game.status, 'FULL', 'Группа собрана')}
+                                  ${selectOptionLabel(game.status, 'DONE', 'Игра завершена')}
+                                  ${selectOptionLabel(game.status, 'CANCELLED', 'Отменена')}
+                                </select>
+                              </div>
+                            </div>
                             </div>
                           </td>
                           <td>
@@ -771,10 +787,16 @@ export async function registerAdminRoutes(app: FastifyInstance) {
                           </td>
                           <td>
                             <div class="game-stack">
-                            <div class="small">registration_limit</div>
-                            <input name="registration_limit" value="${escapeAttr(game.registration_limit?.toString() ?? '')}" />
-                            <div class="small">participant_slots_text</div>
-                            <input name="participant_slots_text" value="${escapeAttr(game.participant_slots_text ?? '')}" />
+                            <div class="pair-grid">
+                              <div>
+                                <div class="small">registration_limit</div>
+                                <input name="registration_limit" value="${escapeAttr(game.registration_limit?.toString() ?? '')}" />
+                              </div>
+                              <div>
+                                <div class="small">participant_slots_text</div>
+                                <input name="participant_slots_text" value="${escapeAttr(game.participant_slots_text ?? '')}" />
+                              </div>
+                            </div>
                             <div class="small">registered_players_text</div>
                             <textarea name="registered_players_text">${escapeHtml(game.registered_players_text ?? '')}</textarea>
                             <div class="small">submitted_sheet_users</div>
@@ -789,17 +811,19 @@ export async function registerAdminRoutes(app: FastifyInstance) {
                             <input name="image_file_id" value="${escapeAttr(game.image_file_id ?? '')}" />
                             </div>
                           </td>
-                          <td style="min-width: 170px;">
-                            <button type="submit">Сохранить</button>
-                            <button
-                              type="submit"
-                              formaction="/admin/games/${game.id}/delete"
-                              formmethod="post"
-                              style="margin-top:8px; background:#b42318;"
-                              onclick="return confirm('Удалить игру #${game.id}?');"
-                            >
-                              Удалить
-                            </button>
+                          <td>
+                            <div class="row-actions">
+                              <button type="submit">Сохранить</button>
+                              <button
+                                type="submit"
+                                formaction="/admin/games/${game.id}/delete"
+                                formmethod="post"
+                                class="btn-danger"
+                                onclick="return confirm('Удалить игру #${game.id}?');"
+                              >
+                                Удалить
+                              </button>
+                            </div>
                           </td>
                         </form>
                       </tr>
@@ -1148,17 +1172,19 @@ export async function registerAdminRoutes(app: FastifyInstance) {
                             </select>
                           </td>
                           <td>${escapeHtml(formatHumanDate(item.created_at))}</td>
-                          <td style="min-width: 170px;">
-                            <button type="submit">Сохранить</button>
-                            <button
-                              type="submit"
-                              formaction="/admin/registrations/${item.id}/delete"
-                              formmethod="post"
-                              style="margin-top:8px; background:#b42318;"
-                              onclick="return confirm('Удалить регистрацию #${item.id}?');"
-                            >
-                              Удалить
-                            </button>
+                          <td>
+                            <div class="row-actions">
+                              <button type="submit">Сохранить</button>
+                              <button
+                                type="submit"
+                                formaction="/admin/registrations/${item.id}/delete"
+                                formmethod="post"
+                                class="btn-danger"
+                                onclick="return confirm('Удалить регистрацию #${item.id}?');"
+                              >
+                                Удалить
+                              </button>
+                            </div>
                           </td>
                         </form>
                       </tr>
