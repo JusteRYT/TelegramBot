@@ -568,9 +568,7 @@ export async function registerAdminRoutes(app: FastifyInstance) {
               font-size: 12px;
             }
             th {
-              position: sticky;
-              top: 64px;
-              z-index: 4;
+              position: static;
               background: var(--surface-2);
               font-size: 11px;
               text-transform: uppercase;
@@ -750,82 +748,82 @@ export async function registerAdminRoutes(app: FastifyInstance) {
               <tbody>
                 ${allGames
                   .map((game) => {
+                    const formId = `game-form-${game.id}`;
                     return `
                       <tr>
-                        <form method="post" action="/admin/games/${game.id}">
-                          <td class="mono">${game.id}</td>
-                          <td>
-                            <div class="game-stack">
-                            <input name="title" value="${escapeAttr(game.title)}" />
-                            <div class="pair-grid">
-                              <div>
-                                <div class="small">type</div>
-                                <select name="type">
-                                  ${selectOption(game.type, 'DND')}
-                                  ${selectOption(game.type, 'MAFIA')}
-                                  ${selectOption(game.type, 'OTHER')}
-                                </select>
-                              </div>
-                              <div>
-                                <div class="small">status</div>
-                                <select name="status">
-                                  ${selectOptionLabel(game.status, 'OPEN', 'Идет набор')}
-                                  ${selectOptionLabel(game.status, 'FULL', 'Группа собрана')}
-                                  ${selectOptionLabel(game.status, 'DONE', 'Игра завершена')}
-                                  ${selectOptionLabel(game.status, 'CANCELLED', 'Отменена')}
-                                </select>
-                              </div>
+                        <td class="mono">${game.id}<form id="${formId}" method="post" action="/admin/games/${game.id}"></form></td>
+                        <td>
+                          <div class="game-stack">
+                          <input form="${formId}" name="title" value="${escapeAttr(game.title)}" />
+                          <div class="pair-grid">
+                            <div>
+                              <div class="small">type</div>
+                              <select form="${formId}" name="type">
+                                ${selectOption(game.type, 'DND')}
+                                ${selectOption(game.type, 'MAFIA')}
+                                ${selectOption(game.type, 'OTHER')}
+                              </select>
                             </div>
+                            <div>
+                              <div class="small">status</div>
+                              <select form="${formId}" name="status">
+                                ${selectOptionLabel(game.status, 'OPEN', 'Идет набор')}
+                                ${selectOptionLabel(game.status, 'FULL', 'Группа собрана')}
+                                ${selectOptionLabel(game.status, 'DONE', 'Игра завершена')}
+                                ${selectOptionLabel(game.status, 'CANCELLED', 'Отменена')}
+                              </select>
                             </div>
-                          </td>
-                          <td>
-                            <div class="game-stack">
-                            <input type="datetime-local" name="starts_at" value="${escapeAttr(toDateTimeLocal(game.starts_at))}" />
-                            <div class="small">gm_name</div>
-                            <input name="gm_name" value="${escapeAttr(game.gm_name ?? '')}" />
+                          </div>
+                          </div>
+                        </td>
+                        <td>
+                          <div class="game-stack">
+                          <input form="${formId}" type="datetime-local" name="starts_at" value="${escapeAttr(toDateTimeLocal(game.starts_at))}" />
+                          <div class="small">gm_name</div>
+                          <input form="${formId}" name="gm_name" value="${escapeAttr(game.gm_name ?? '')}" />
+                          </div>
+                        </td>
+                        <td>
+                          <div class="game-stack">
+                          <div class="pair-grid">
+                            <div>
+                              <div class="small">registration_limit</div>
+                              <input form="${formId}" name="registration_limit" value="${escapeAttr(game.registration_limit?.toString() ?? '')}" />
                             </div>
-                          </td>
-                          <td>
-                            <div class="game-stack">
-                            <div class="pair-grid">
-                              <div>
-                                <div class="small">registration_limit</div>
-                                <input name="registration_limit" value="${escapeAttr(game.registration_limit?.toString() ?? '')}" />
-                              </div>
-                              <div>
-                                <div class="small">participant_slots_text</div>
-                                <input name="participant_slots_text" value="${escapeAttr(game.participant_slots_text ?? '')}" />
-                              </div>
+                            <div>
+                              <div class="small">participant_slots_text</div>
+                              <input form="${formId}" name="participant_slots_text" value="${escapeAttr(game.participant_slots_text ?? '')}" />
                             </div>
-                            <div class="small">registered_players_text</div>
-                            <textarea name="registered_players_text">${escapeHtml(game.registered_players_text ?? '')}</textarea>
-                            <div class="small">submitted_sheet_users</div>
-                            <input name="submitted_sheet_users" value="${escapeAttr(game.submitted_sheet_users ?? '')}" />
-                            </div>
-                          </td>
-                          <td>
-                            <div class="game-stack">
-                            <div class="small">description</div>
-                            <textarea name="description">${escapeHtml(game.description ?? '')}</textarea>
-                            <div class="small">image_file_id</div>
-                            <input name="image_file_id" value="${escapeAttr(game.image_file_id ?? '')}" />
-                            </div>
-                          </td>
-                          <td>
-                            <div class="row-actions">
-                              <button type="submit">Сохранить</button>
-                              <button
-                                type="submit"
-                                formaction="/admin/games/${game.id}/delete"
-                                formmethod="post"
-                                class="btn-danger"
-                                onclick="return confirm('Удалить игру #${game.id}?');"
-                              >
-                                Удалить
-                              </button>
-                            </div>
-                          </td>
-                        </form>
+                          </div>
+                          <div class="small">registered_players_text</div>
+                          <textarea form="${formId}" name="registered_players_text">${escapeHtml(game.registered_players_text ?? '')}</textarea>
+                          <div class="small">submitted_sheet_users</div>
+                          <input form="${formId}" name="submitted_sheet_users" value="${escapeAttr(game.submitted_sheet_users ?? '')}" />
+                          </div>
+                        </td>
+                        <td>
+                          <div class="game-stack">
+                          <div class="small">description</div>
+                          <textarea form="${formId}" name="description">${escapeHtml(game.description ?? '')}</textarea>
+                          <div class="small">image_file_id</div>
+                          <input form="${formId}" name="image_file_id" value="${escapeAttr(game.image_file_id ?? '')}" />
+                          </div>
+                        </td>
+                        <td>
+                          <div class="row-actions">
+                            <button form="${formId}" type="submit">Сохранить</button>
+                            <button
+                              form="${formId}"
+                              type="submit"
+                              formaction="/admin/games/${game.id}/delete"
+                              formmethod="post"
+                              class="btn-danger"
+                              onclick="return confirm('Удалить игру #${game.id}?');"
+                            >
+                              Удалить
+                            </button>
+                          </div>
+                        </td>
                       </tr>
                     `;
                   })
