@@ -612,6 +612,21 @@ export async function registerAdminRoutes(app: FastifyInstance) {
             .nowrap { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
             .game-stack { display: grid; gap: 6px; }
             .pair-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+            .desc-preview {
+              background: var(--surface-2);
+              border: 1px solid var(--line);
+              border-radius: 8px;
+              padding: 8px 10px;
+              white-space: pre-wrap;
+              word-break: break-word;
+              line-height: 1.45;
+              max-height: 130px;
+              overflow: auto;
+            }
+            .desc-editor {
+              min-height: 120px;
+              line-height: 1.45;
+            }
             .new-entry {
               background: var(--surface-2);
               border: 1px dashed var(--line);
@@ -810,9 +825,11 @@ export async function registerAdminRoutes(app: FastifyInstance) {
                           </div>
                         </td>
                          <td>
-                          <div class="game-stack">
-                          <div class="small">Описание объявления</div>
-                          <textarea form="${formId}" name="description">${escapeHtml(game.description ?? '')}</textarea>
+                         <div class="game-stack">
+                          <div class="small">Описание объявления (предпросмотр)</div>
+                          <div class="desc-preview">${escapeHtml(game.description ?? 'Описание пока не задано')}</div>
+                          <div class="small">Редактирование описания</div>
+                          <textarea form="${formId}" name="description" class="desc-editor">${escapeHtml(game.description ?? '')}</textarea>
                           <div class="small">ID изображения (Telegram)</div>
                           <input form="${formId}" name="image_file_id" value="${escapeAttr(game.image_file_id ?? '')}" />
                           </div>
