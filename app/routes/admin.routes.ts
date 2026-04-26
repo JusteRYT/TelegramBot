@@ -455,36 +455,38 @@ export async function registerAdminRoutes(app: FastifyInstance) {
           <title>Telegram Bot Admin</title>
           <style>
             :root {
-              --bg: #f4f7ff;
-              --bg-grad-a: #e7efff;
-              --bg-grad-b: #f2f9ff;
-              --surface: #ffffffcc;
-              --surface-strong: #ffffff;
-              --text: #152238;
-              --muted: #5f6f8d;
-              --line: #d8e2f3;
-              --accent: #1d4ed8;
-              --accent-2: #0ea5e9;
-              --danger: #c62828;
-              --ok-bg: #e9f9ef;
-              --ok-line: #b7e7c4;
-              --ok-text: #166534;
+              --bg: #f6f9ff;
+              --bg-soft: #e8f0ff;
+              --surface: #ffffff;
+              --surface-2: #f9fbff;
+              --text: #18243a;
+              --muted: #607293;
+              --line: #d8e3f4;
+              --accent: #2463eb;
+              --accent-soft: #e8f0ff;
+              --danger: #d0342c;
+              --success-bg: #e8f8ee;
+              --success-line: #bce7ca;
+              --success-text: #13653c;
+              --shadow: 0 10px 30px rgba(20, 33, 60, 0.10);
+              --stripe: #f5f8ff;
             }
             body[data-theme="dark"] {
-              --bg: #0b1220;
-              --bg-grad-a: #111a2b;
-              --bg-grad-b: #0f1a30;
-              --surface: #111b2be6;
-              --surface-strong: #172235;
-              --text: #e7eefc;
-              --muted: #a5b4d1;
-              --line: #2b3b57;
-              --accent: #4f8cff;
-              --accent-2: #36c2ff;
-              --danger: #ef5350;
-              --ok-bg: #143326;
-              --ok-line: #225a40;
-              --ok-text: #9ef0c4;
+              --bg: #0b1323;
+              --bg-soft: #13213a;
+              --surface: #162238;
+              --surface-2: #101b2f;
+              --text: #edf3ff;
+              --muted: #b5c2db;
+              --line: #2a3a59;
+              --accent: #66a0ff;
+              --accent-soft: #1b2d4d;
+              --danger: #ff6b63;
+              --success-bg: #183829;
+              --success-line: #2a5e46;
+              --success-text: #b6f6d0;
+              --shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+              --stripe: #132039;
             }
             * { box-sizing: border-box; }
             body {
@@ -493,11 +495,12 @@ export async function registerAdminRoutes(app: FastifyInstance) {
               padding: 18px;
               color: var(--text);
               background:
-                radial-gradient(1200px 500px at 10% -10%, var(--bg-grad-a), transparent 60%),
-                radial-gradient(900px 450px at 100% 0%, var(--bg-grad-b), transparent 55%),
+                radial-gradient(1200px 450px at 0% -5%, var(--bg-soft), transparent 60%),
+                radial-gradient(1000px 450px at 100% 0%, var(--bg-soft), transparent 58%),
                 var(--bg);
             }
-            h1, h2 { margin: 0; }
+            h1, h2, h3 { margin: 0; }
+            .layout { max-width: 1600px; margin: 0 auto; }
             .topbar {
               position: sticky;
               top: 0;
@@ -505,99 +508,123 @@ export async function registerAdminRoutes(app: FastifyInstance) {
               display: flex;
               align-items: center;
               justify-content: space-between;
-              gap: 12px;
-              padding: 12px 14px;
+              gap: 10px;
+              padding: 14px;
               margin-bottom: 14px;
               border-radius: 14px;
               border: 1px solid var(--line);
-              background: linear-gradient(120deg, var(--surface-strong), var(--surface));
-              backdrop-filter: blur(8px);
-              box-shadow: 0 10px 30px rgba(0,0,0,0.12);
+              background: var(--surface);
+              box-shadow: var(--shadow);
             }
-            .title-wrap small { display: block; color: var(--muted); margin-top: 3px; font-size: 12px; }
+            .title-wrap small { display: block; color: var(--muted); margin-top: 4px; font-size: 12px; }
             .theme-toggle {
               border: 1px solid var(--line);
-              background: transparent;
+              background: var(--surface-2);
               color: var(--text);
               border-radius: 10px;
-              padding: 8px 10px;
+              padding: 8px 12px;
               cursor: pointer;
             }
             .card {
-              background: linear-gradient(180deg, var(--surface), var(--surface-strong));
+              background: var(--surface);
               border-radius: 14px;
               border: 1px solid var(--line);
               padding: 14px;
               margin-bottom: 14px;
-              box-shadow: 0 10px 28px rgba(0,0,0,0.10);
+              box-shadow: var(--shadow);
               overflow-x: auto;
             }
-            .card h2 { margin-bottom: 8px; }
+            .section-head {
+              display: flex;
+              align-items: center;
+              justify-content: space-between;
+              gap: 10px;
+              margin-bottom: 8px;
+            }
             .hint { color: var(--muted); margin: 0 0 12px 0; }
             .ok {
-              background: var(--ok-bg);
-              border: 1px solid var(--ok-line);
-              color: var(--ok-text);
+              background: var(--success-bg);
+              border: 1px solid var(--success-line);
+              color: var(--success-text);
               padding: 10px 12px;
               border-radius: 10px;
               margin-bottom: 12px;
             }
-            table { width: 100%; border-collapse: separate; border-spacing: 0; min-width: 960px; table-layout: fixed; }
-            th, td { text-align: left; padding: 7px; border-bottom: 1px solid var(--line); vertical-align: middle; font-size: 12px; }
+            table {
+              width: 100%;
+              border-collapse: separate;
+              border-spacing: 0;
+              min-width: 980px;
+              table-layout: fixed;
+              border: 1px solid var(--line);
+              border-radius: 12px;
+              overflow: hidden;
+            }
+            th, td {
+              text-align: left;
+              padding: 8px;
+              border-bottom: 1px solid var(--line);
+              vertical-align: middle;
+              font-size: 12px;
+            }
             th {
               position: sticky;
-              top: 58px;
-              z-index: 5;
-              background: color-mix(in srgb, var(--surface-strong) 85%, var(--accent) 15%);
+              top: 64px;
+              z-index: 4;
+              background: var(--surface-2);
               font-size: 11px;
               text-transform: uppercase;
               letter-spacing: 0.03em;
             }
-            tbody tr:nth-child(even) { background: color-mix(in srgb, var(--surface-strong) 94%, var(--accent) 6%); }
+            tbody tr:nth-child(even) { background: var(--stripe); }
             input, textarea, select, button { font: inherit; }
             input, textarea, select {
               width: 100%;
-              box-sizing: border-box;
               padding: 6px 8px;
               border: 1px solid var(--line);
               border-radius: 8px;
               color: var(--text);
-              background: color-mix(in srgb, var(--surface-strong) 92%, var(--accent) 8%);
+              background: var(--surface-2);
             }
-            textarea { min-height: 40px; resize: vertical; }
+            textarea { min-height: 42px; resize: vertical; }
             input:focus, textarea:focus, select:focus {
               outline: none;
               border-color: var(--accent);
-              box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 24%, transparent);
+              box-shadow: 0 0 0 3px rgba(70, 130, 255, 0.22);
             }
             button {
-              background: linear-gradient(135deg, var(--accent), var(--accent-2));
+              background: var(--accent);
               color: #fff;
               border: none;
               border-radius: 8px;
-              padding: 7px 10px;
+              padding: 7px 11px;
               cursor: pointer;
+              font-weight: 600;
             }
-            button:hover { filter: brightness(1.05); }
+            .btn-secondary {
+              background: var(--accent-soft);
+              color: var(--text);
+              border: 1px solid var(--line);
+            }
+            .btn-danger { background: var(--danger); }
             .mono { font-family: Consolas, monospace; }
             .small { font-size: 10px; color: var(--muted); margin-top: 2px; }
             .row-actions { display: flex; gap: 6px; }
-            .btn-danger { background: linear-gradient(135deg, var(--danger), #ef5350); }
-            .inline-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
             .nowrap { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-            .compact { max-width: 220px; }
             .game-stack { display: grid; gap: 6px; }
             .new-entry {
-              background: color-mix(in srgb, var(--surface-strong) 90%, var(--accent) 10%);
-              border: 1px solid var(--line);
+              background: var(--surface-2);
+              border: 1px dashed var(--line);
               border-radius: 12px;
               padding: 12px;
-              margin-bottom: 12px;
+              margin: 0 0 12px 0;
             }
-            .new-entry h3 { margin: 0 0 8px 0; font-size: 13px; }
+            .new-entry h3 { margin-bottom: 8px; font-size: 14px; }
             .new-entry-grid { display: grid; grid-template-columns: repeat(4, minmax(140px, 1fr)); gap: 8px; }
+            .collapsible-form { display: none; }
+            .collapsible-form.open { display: block; }
             .status-help {
-              background: color-mix(in srgb, var(--surface-strong) 86%, var(--accent-2) 14%);
+              background: var(--surface-2);
               border: 1px solid var(--line);
               border-radius: 10px;
               padding: 10px;
@@ -612,10 +639,12 @@ export async function registerAdminRoutes(app: FastifyInstance) {
             }
             @media (max-width: 640px) {
               .new-entry-grid { grid-template-columns: 1fr; }
+              .section-head { flex-direction: column; align-items: flex-start; }
             }
           </style>
         </head>
         <body>
+          <div class="layout">
           <div class="topbar">
             <div class="title-wrap">
               <h1>Telegram Bot Admin</h1>
@@ -627,9 +656,12 @@ export async function registerAdminRoutes(app: FastifyInstance) {
           ${query.saved ? `<div class="ok">Изменения сохранены: ${escapeHtml(query.saved)}</div>` : ''}
 
           <div class="card">
-            <h2>Игры</h2>
+            <div class="section-head">
+              <h2>Игры</h2>
+              <button type="button" class="btn-secondary" data-toggle="createGameForm">+ Добавить игру</button>
+            </div>
             <div class="hint">Редактирование игр в более компактном виде: слева основные параметры, справа состав и медиа.</div>
-            <form method="post" action="/admin/games" class="new-entry">
+            <form method="post" action="/admin/games" class="new-entry collapsible-form" id="createGameForm">
               <h3>Добавить новую игру</h3>
               <div class="new-entry-grid">
                 <div>
@@ -779,8 +811,11 @@ export async function registerAdminRoutes(app: FastifyInstance) {
           </div>
 
           <div class="card">
-            <h2>Пользователи</h2>
-            <form method="post" action="/admin/users" class="new-entry">
+            <div class="section-head">
+              <h2>Пользователи</h2>
+              <button type="button" class="btn-secondary" data-toggle="createUserForm">+ Добавить пользователя</button>
+            </div>
+            <form method="post" action="/admin/users" class="new-entry collapsible-form" id="createUserForm">
               <h3>Добавить нового пользователя</h3>
               <div class="new-entry-grid">
                 <div>
@@ -904,8 +939,11 @@ export async function registerAdminRoutes(app: FastifyInstance) {
           </div>
 
           <div class="card">
-            <h2>Предупреждения (warnings_log)</h2>
-            <form method="post" action="/admin/warnings" class="new-entry">
+            <div class="section-head">
+              <h2>Предупреждения (warnings_log)</h2>
+              <button type="button" class="btn-secondary" data-toggle="createWarningForm">+ Добавить предупреждение</button>
+            </div>
+            <form method="post" action="/admin/warnings" class="new-entry collapsible-form" id="createWarningForm">
               <h3>Добавить новое предупреждение</h3>
               <div class="new-entry-grid">
                 <div>
@@ -982,8 +1020,11 @@ export async function registerAdminRoutes(app: FastifyInstance) {
           </div>
 
           <div class="card">
-            <h2>Баны (bans_log)</h2>
-            <form method="post" action="/admin/bans" class="new-entry">
+            <div class="section-head">
+              <h2>Баны (bans_log)</h2>
+              <button type="button" class="btn-secondary" data-toggle="createBanForm">+ Добавить бан</button>
+            </div>
+            <form method="post" action="/admin/bans" class="new-entry collapsible-form" id="createBanForm">
               <h3>Добавить новый бан</h3>
               <div class="new-entry-grid">
                 <div>
@@ -1149,8 +1190,30 @@ export async function registerAdminRoutes(app: FastifyInstance) {
                   localStorage.setItem(key, next);
                 });
               }
+
+              document.querySelectorAll('[data-toggle]').forEach(function (toggleBtn) {
+                toggleBtn.addEventListener('click', function () {
+                  const targetId = toggleBtn.getAttribute('data-toggle');
+                  if (!targetId) return;
+                  const form = document.getElementById(targetId);
+                  if (!form) return;
+                  const isOpen = form.classList.toggle('open');
+                  if (isOpen) {
+                    const firstInput = form.querySelector('input, select, textarea');
+                    if (firstInput) firstInput.focus();
+                    toggleBtn.textContent = '− Скрыть форму';
+                  } else {
+                    toggleBtn.textContent =
+                      targetId === 'createGameForm' ? '+ Добавить игру' :
+                      targetId === 'createUserForm' ? '+ Добавить пользователя' :
+                      targetId === 'createWarningForm' ? '+ Добавить предупреждение' :
+                      '+ Добавить бан';
+                  }
+                });
+              });
             })();
           </script>
+          </div>
         </body>
       </html>
     `;
