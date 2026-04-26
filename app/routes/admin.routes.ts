@@ -706,15 +706,15 @@ export async function registerAdminRoutes(app: FastifyInstance) {
                   </select>
                 </div>
                 <div>
-                  <div class="small">image_file_id</div>
+                  <div class="small">ID изображения (Telegram)</div>
                   <input name="image_file_id" placeholder="опционально" />
                 </div>
                 <div style="grid-column: span 2;">
-                  <div class="small">participant_slots_text</div>
+                  <div class="small">Текст мест (как в анонсе)</div>
                   <input name="participant_slots_text" placeholder="опционально" />
                 </div>
                 <div style="grid-column: span 2;">
-                  <div class="small">registered_players_text (через запятую)</div>
+                  <div class="small">Участники (через запятую)</div>
                   <input name="registered_players_text" placeholder="@user1, @user2" />
                 </div>
                 <div style="grid-column: span 4;">
@@ -729,18 +729,20 @@ export async function registerAdminRoutes(app: FastifyInstance) {
             <table>
               <colgroup>
                 <col style="width: 70px;" />
-                <col style="width: 300px;" />
-                <col style="width: 220px;" />
-                <col style="width: 340px;" />
-                <col style="width: 300px;" />
+                <col style="width: 280px;" />
+                <col style="width: 190px;" />
+                <col style="width: 210px;" />
+                <col style="width: 330px;" />
+                <col style="width: 280px;" />
                 <col style="width: 160px;" />
               </colgroup>
               <thead>
                 <tr>
                   <th>ID</th>
-                  <th>Основное</th>
-                  <th>Дата и мастер</th>
-                  <th>Состав</th>
+                  <th>Игра</th>
+                  <th>Дата и время</th>
+                  <th>Мастер (ГМ)</th>
+                  <th>Набор и участники</th>
                   <th>Описание и медиа</th>
                   <th>Действия</th>
                 </tr>
@@ -754,10 +756,11 @@ export async function registerAdminRoutes(app: FastifyInstance) {
                         <td class="mono">${game.id}<form id="${formId}" method="post" action="/admin/games/${game.id}"></form></td>
                         <td>
                           <div class="game-stack">
+                          <div class="small">Название</div>
                           <input form="${formId}" name="title" value="${escapeAttr(game.title)}" />
                           <div class="pair-grid">
                             <div>
-                              <div class="small">type</div>
+                              <div class="small">Тип игры</div>
                               <select form="${formId}" name="type">
                                 ${selectOption(game.type, 'DND')}
                                 ${selectOption(game.type, 'MAFIA')}
@@ -765,7 +768,7 @@ export async function registerAdminRoutes(app: FastifyInstance) {
                               </select>
                             </div>
                             <div>
-                              <div class="small">status</div>
+                              <div class="small">Статус набора</div>
                               <select form="${formId}" name="status">
                                 ${selectOptionLabel(game.status, 'OPEN', 'Идет набор')}
                                 ${selectOptionLabel(game.status, 'FULL', 'Группа собрана')}
@@ -778,8 +781,13 @@ export async function registerAdminRoutes(app: FastifyInstance) {
                         </td>
                         <td>
                           <div class="game-stack">
+                          <div class="small">Дата и время (МСК)</div>
                           <input form="${formId}" type="datetime-local" name="starts_at" value="${escapeAttr(toDateTimeLocal(game.starts_at))}" />
-                          <div class="small">gm_name</div>
+                          </div>
+                        </td>
+                        <td>
+                          <div class="game-stack">
+                          <div class="small">Имя мастера / @username</div>
                           <input form="${formId}" name="gm_name" value="${escapeAttr(game.gm_name ?? '')}" />
                           </div>
                         </td>
@@ -787,25 +795,25 @@ export async function registerAdminRoutes(app: FastifyInstance) {
                           <div class="game-stack">
                           <div class="pair-grid">
                             <div>
-                              <div class="small">registration_limit</div>
+                              <div class="small">Лимит мест</div>
                               <input form="${formId}" name="registration_limit" value="${escapeAttr(game.registration_limit?.toString() ?? '')}" />
                             </div>
                             <div>
-                              <div class="small">participant_slots_text</div>
+                              <div class="small">Текст мест в анонсе</div>
                               <input form="${formId}" name="participant_slots_text" value="${escapeAttr(game.participant_slots_text ?? '')}" />
                             </div>
                           </div>
-                          <div class="small">registered_players_text</div>
+                          <div class="small">Участники (через запятую)</div>
                           <textarea form="${formId}" name="registered_players_text">${escapeHtml(game.registered_players_text ?? '')}</textarea>
-                          <div class="small">submitted_sheet_users</div>
+                          <div class="small">Сдавшие анкеты (через запятую)</div>
                           <input form="${formId}" name="submitted_sheet_users" value="${escapeAttr(game.submitted_sheet_users ?? '')}" />
                           </div>
                         </td>
-                        <td>
+                         <td>
                           <div class="game-stack">
-                          <div class="small">description</div>
+                          <div class="small">Описание объявления</div>
                           <textarea form="${formId}" name="description">${escapeHtml(game.description ?? '')}</textarea>
-                          <div class="small">image_file_id</div>
+                          <div class="small">ID изображения (Telegram)</div>
                           <input form="${formId}" name="image_file_id" value="${escapeAttr(game.image_file_id ?? '')}" />
                           </div>
                         </td>
