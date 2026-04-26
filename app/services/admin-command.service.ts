@@ -6,6 +6,7 @@ import type {
   SheetsPendingSelectionState,
   WizardState,
 } from '../bot/types';
+import { env } from '../config/env';
 
 import { AnnouncementService } from './announcement.service';
 import { BotSessionService } from './bot-session.service';
@@ -379,6 +380,17 @@ export class AdminCommandService {
       return;
     }
 
+    const game = this.games.getById(gameId);
+    if (!game) {
+      await ctx.reply('❌ Игра не найдена.');
+      return;
+    }
+
+    if (game.type !== 'DND') {
+      await ctx.reply('ℹ️ Команда <code>/sheets</code> доступна только для D&D-игр.', { parse_mode: 'HTML' });
+      return;
+    }
+
     const pendingPlayers = this.games.getPendingSheetPlayers(gameId);
     if (pendingPlayers === null) {
       await ctx.reply('❌ Игра не найдена.');
@@ -572,7 +584,54 @@ export class AdminCommandService {
     const selected = indices.map((index) => state.pendingPlayers[index]);
     const result = this.games.markSheetsSubmitted(state.gameId, selected);
     this.sessions.clear(ctx.from.id);
+    await this.notifyPlayersAboutApprovedSheets(state.gameId, selected);
     await ctx.reply(result);
+  }
+
+  private async notifyPlayersAboutApprovedSheets(gameId: number, usernames: string[]) {
+    if (!usernames.length) {
+      return;
+    }
+
+    const detailed = this.games.getDetailedById(gameId);
+    if (!detailed) {
+      return;
+    }
+
+    const normalized = new Set(
+      usernames.map((username) => username.replace('@', '').trim().toLowerCase()).filter(Boolean),
+    );
+    if (!normalized.size) {
+      return;
+    }
+
+    const gameLink = detailed.announcement_message_id
+      ? `${this.channelBaseUrl()}/${detailed.announcement_message_id}${env.ANNOUNCEMENT_TOPIC_ID ? `?thread=${env.ANNOUNCEMENT_TOPIC_ID}` : ''}`
+      : null;
+
+    for (const registration of detailed.registrations) {
+      const username = (registration.username ?? '').trim().toLowerCase();
+      if (!username || !normalized.has(username)) {
+        continue;
+      }
+
+      const text =
+        `✅ <b>Анкета принята</b>\n\n` +
+        `🎮 Игра: ${gameLink ? `<a href="${gameLink}"><b>${detailed.title}</b></a>` : `<b>${detailed.title}</b>`}\n` +
+        `🧙‍♂️ Мастер: ${detailed.gm_name ?? 'уточняется'}\n\n` +
+        `<i>Вы в составе, до встречи на игре!</i>`;
+
+      try {
+        await this.announcements.sendPrivateMessage(registration.telegram_id, text, 'HTML');
+      } catch (error) {
+        console.warn(`Failed to notify player about approved sheet (game #${gameId}, tg=${registration.telegram_id}):`, error);
+      }
+    }
+  }
+
+  private channelBaseUrl() {
+    const cleanId = String(env.MAIN_CHAT_ID).replace('-100', '');
+    return `https://t.me/c/${cleanId}`;
   }
 
   private async handleEditInput(ctx: BotContextLike, state: EditInputValueState) {

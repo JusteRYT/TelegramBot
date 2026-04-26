@@ -123,6 +123,10 @@ export class AnnouncementService {
     });
   }
 
+  async sendPrivateMessage(telegramId: number, text: string, parseMode: 'HTML' | 'MarkdownV2' = 'HTML') {
+    await this.bot.api.sendMessage(telegramId, text, { parse_mode: parseMode });
+  }
+
   private getRegistrationKeyboard(gameId: number, status: string) {
     if (status !== 'OPEN') {
       return undefined;

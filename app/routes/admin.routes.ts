@@ -26,6 +26,50 @@ function ensureAdminPanelAuth(request: FastifyRequest, reply: FastifyReply) {
 }
 
 export async function registerAdminRoutes(app: FastifyInstance) {
+  app.post('/admin/games', async (request, reply) => {
+    if (!ensureAdminPanelAuth(request, reply)) {
+      return;
+    }
+
+    const body = request.body as FormBody;
+    const startsAt = parseDateTimeLocal(body.starts_at);
+    if (!startsAt) {
+      reply.redirect('/admin?saved=invalid_game_datetime');
+      return;
+    }
+
+    const createdByUserId = parseNullableInt(body.created_by_user_id);
+    if (!createdByUserId || !users.findById(createdByUserId)) {
+      reply.redirect('/admin?saved=invalid_game_creator');
+      return;
+    }
+
+    const type = normalizeGameType(body.type) ?? 'DND';
+    const status = normalizeGameStatus(body.status) ?? 'OPEN';
+    const registrationLimit = parseNullableInt(body.registration_limit) ?? undefined;
+
+    const created = games.createGame({
+      type,
+      title: (body.title ?? '').trim(),
+      startsAtInput: startsAt,
+      gmName: normalizeNullableText(body.gm_name),
+      registrationLimit,
+      participantSlotsText: normalizeNullableText(body.participant_slots_text),
+      registeredPlayersText: normalizePlayers(body.registered_players_text),
+      imageFileId: normalizeNullableText(body.image_file_id),
+      description: normalizeNullableText(body.description),
+      status,
+      createdByUserId,
+    });
+
+    if (!created.ok) {
+      reply.redirect(`/admin?saved=${encodeURIComponent(`game_create_failed_${created.reason}`)}`);
+      return;
+    }
+
+    reply.redirect('/admin?saved=game_created');
+  });
+
   app.post('/admin/games/:id/delete', async (request, reply) => {
     if (!ensureAdminPanelAuth(request, reply)) {
       return;
@@ -127,6 +171,70 @@ export async function registerAdminRoutes(app: FastifyInstance) {
     }
 
     reply.redirect('/admin?saved=user');
+  });
+
+  app.post('/admin/users', async (request, reply) => {
+    if (!ensureAdminPanelAuth(request, reply)) {
+      return;
+    }
+
+    const body = request.body as FormBody;
+    const usernameRaw = (body.username ?? '').trim();
+    if (!usernameRaw) {
+      reply.redirect('/admin?saved=username_required');
+      return;
+    }
+
+    const normalizedUsername = usernameRaw.replace('@', '').trim();
+    const firstName = normalizeNullableText(body.first_name);
+    const lastName = normalizeNullableText(body.last_name);
+    const status = normalizeUserStatus(body.user_status) ?? 'Кандидат';
+    const warningsCount = parseNonNegativeInt(body.warnings_count) ?? 0;
+    const gamesCount = parseNonNegativeInt(body.games_count) ?? 0;
+    const isAdmin = body.is_admin === '1';
+    const lastGameAt = parseDateTimeLocal(body.last_game_at) ?? null;
+    const telegramId = parseTelegramId(body.telegram_id);
+
+    let user =
+      telegramId !== null
+        ? users.upsertByTelegram({
+            telegramId,
+            username: normalizedUsername,
+            firstName,
+            lastName,
+            isAdmin,
+          })
+        : users.createManualUser({
+            username: normalizedUsername,
+            firstName,
+            lastName,
+            status,
+          });
+
+    if (!user) {
+      reply.redirect('/admin?saved=user_create_failed');
+      return;
+    }
+
+    users.updateById({
+      id: user.id,
+      username: normalizedUsername,
+      firstName,
+      lastName,
+      userStatus: status,
+      warningsCount,
+      gamesCount,
+      lastGameAt,
+      isAdmin,
+    });
+
+    user = users.findById(user.id);
+    if (!user) {
+      reply.redirect('/admin?saved=user_create_failed');
+      return;
+    }
+
+    reply.redirect('/admin?saved=user_created');
   });
 
   app.post('/admin/users/:id/delete', async (request, reply) => {
@@ -346,42 +454,254 @@ export async function registerAdminRoutes(app: FastifyInstance) {
           <meta name="viewport" content="width=device-width, initial-scale=1" />
           <title>Telegram Bot Admin</title>
           <style>
-            body { font-family: Arial, sans-serif; margin: 18px; background: #f5f7fb; color: #1d2433; }
-            h1, h2 { margin-bottom: 10px; }
-            .card { background: white; border-radius: 12px; padding: 14px; margin-bottom: 14px; box-shadow: 0 8px 24px rgba(0,0,0,0.06); overflow-x: auto; }
-            .hint { color: #63708a; margin-bottom: 12px; }
-            .ok { background: #e9f9ef; border: 1px solid #b7e7c4; color: #166534; padding: 8px 10px; border-radius: 10px; margin-bottom: 12px; }
-            table { width: 100%; border-collapse: collapse; min-width: 1100px; table-layout: fixed; }
-            th, td { text-align: left; padding: 6px; border-bottom: 1px solid #e7ebf3; vertical-align: middle; font-size: 12px; }
-            th { background: #f0f4fb; font-size: 11px; text-transform: uppercase; letter-spacing: 0.02em; }
+            :root {
+              --bg: #f4f7ff;
+              --bg-grad-a: #e7efff;
+              --bg-grad-b: #f2f9ff;
+              --surface: #ffffffcc;
+              --surface-strong: #ffffff;
+              --text: #152238;
+              --muted: #5f6f8d;
+              --line: #d8e2f3;
+              --accent: #1d4ed8;
+              --accent-2: #0ea5e9;
+              --danger: #c62828;
+              --ok-bg: #e9f9ef;
+              --ok-line: #b7e7c4;
+              --ok-text: #166534;
+            }
+            body[data-theme="dark"] {
+              --bg: #0b1220;
+              --bg-grad-a: #111a2b;
+              --bg-grad-b: #0f1a30;
+              --surface: #111b2be6;
+              --surface-strong: #172235;
+              --text: #e7eefc;
+              --muted: #a5b4d1;
+              --line: #2b3b57;
+              --accent: #4f8cff;
+              --accent-2: #36c2ff;
+              --danger: #ef5350;
+              --ok-bg: #143326;
+              --ok-line: #225a40;
+              --ok-text: #9ef0c4;
+            }
+            * { box-sizing: border-box; }
+            body {
+              font-family: "Segoe UI", "Trebuchet MS", sans-serif;
+              margin: 0;
+              padding: 18px;
+              color: var(--text);
+              background:
+                radial-gradient(1200px 500px at 10% -10%, var(--bg-grad-a), transparent 60%),
+                radial-gradient(900px 450px at 100% 0%, var(--bg-grad-b), transparent 55%),
+                var(--bg);
+            }
+            h1, h2 { margin: 0; }
+            .topbar {
+              position: sticky;
+              top: 0;
+              z-index: 20;
+              display: flex;
+              align-items: center;
+              justify-content: space-between;
+              gap: 12px;
+              padding: 12px 14px;
+              margin-bottom: 14px;
+              border-radius: 14px;
+              border: 1px solid var(--line);
+              background: linear-gradient(120deg, var(--surface-strong), var(--surface));
+              backdrop-filter: blur(8px);
+              box-shadow: 0 10px 30px rgba(0,0,0,0.12);
+            }
+            .title-wrap small { display: block; color: var(--muted); margin-top: 3px; font-size: 12px; }
+            .theme-toggle {
+              border: 1px solid var(--line);
+              background: transparent;
+              color: var(--text);
+              border-radius: 10px;
+              padding: 8px 10px;
+              cursor: pointer;
+            }
+            .card {
+              background: linear-gradient(180deg, var(--surface), var(--surface-strong));
+              border-radius: 14px;
+              border: 1px solid var(--line);
+              padding: 14px;
+              margin-bottom: 14px;
+              box-shadow: 0 10px 28px rgba(0,0,0,0.10);
+              overflow-x: auto;
+            }
+            .card h2 { margin-bottom: 8px; }
+            .hint { color: var(--muted); margin: 0 0 12px 0; }
+            .ok {
+              background: var(--ok-bg);
+              border: 1px solid var(--ok-line);
+              color: var(--ok-text);
+              padding: 10px 12px;
+              border-radius: 10px;
+              margin-bottom: 12px;
+            }
+            table { width: 100%; border-collapse: separate; border-spacing: 0; min-width: 960px; table-layout: fixed; }
+            th, td { text-align: left; padding: 7px; border-bottom: 1px solid var(--line); vertical-align: middle; font-size: 12px; }
+            th {
+              position: sticky;
+              top: 58px;
+              z-index: 5;
+              background: color-mix(in srgb, var(--surface-strong) 85%, var(--accent) 15%);
+              font-size: 11px;
+              text-transform: uppercase;
+              letter-spacing: 0.03em;
+            }
+            tbody tr:nth-child(even) { background: color-mix(in srgb, var(--surface-strong) 94%, var(--accent) 6%); }
             input, textarea, select, button { font: inherit; }
-            input, textarea, select { width: 100%; box-sizing: border-box; padding: 5px 7px; border: 1px solid #d4dbe8; border-radius: 7px; background: white; }
-            textarea { min-height: 34px; resize: vertical; }
-            button { background: #1d4ed8; color: white; border: none; border-radius: 7px; padding: 6px 8px; cursor: pointer; }
+            input, textarea, select {
+              width: 100%;
+              box-sizing: border-box;
+              padding: 6px 8px;
+              border: 1px solid var(--line);
+              border-radius: 8px;
+              color: var(--text);
+              background: color-mix(in srgb, var(--surface-strong) 92%, var(--accent) 8%);
+            }
+            textarea { min-height: 40px; resize: vertical; }
+            input:focus, textarea:focus, select:focus {
+              outline: none;
+              border-color: var(--accent);
+              box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 24%, transparent);
+            }
+            button {
+              background: linear-gradient(135deg, var(--accent), var(--accent-2));
+              color: #fff;
+              border: none;
+              border-radius: 8px;
+              padding: 7px 10px;
+              cursor: pointer;
+            }
+            button:hover { filter: brightness(1.05); }
             .mono { font-family: Consolas, monospace; }
-            .small { font-size: 10px; color: #63708a; margin-top: 2px; }
+            .small { font-size: 10px; color: var(--muted); margin-top: 2px; }
             .row-actions { display: flex; gap: 6px; }
-            .btn-danger { background: #b42318; }
+            .btn-danger { background: linear-gradient(135deg, var(--danger), #ef5350); }
             .inline-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
             .nowrap { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
             .compact { max-width: 220px; }
+            .game-stack { display: grid; gap: 6px; }
+            .new-entry {
+              background: color-mix(in srgb, var(--surface-strong) 90%, var(--accent) 10%);
+              border: 1px solid var(--line);
+              border-radius: 12px;
+              padding: 12px;
+              margin-bottom: 12px;
+            }
+            .new-entry h3 { margin: 0 0 8px 0; font-size: 13px; }
+            .new-entry-grid { display: grid; grid-template-columns: repeat(4, minmax(140px, 1fr)); gap: 8px; }
+            .status-help {
+              background: color-mix(in srgb, var(--surface-strong) 86%, var(--accent-2) 14%);
+              border: 1px solid var(--line);
+              border-radius: 10px;
+              padding: 10px;
+              margin-bottom: 10px;
+              font-size: 12px;
+              color: var(--text);
+            }
+            @media (max-width: 920px) {
+              body { padding: 10px; }
+              .topbar { position: static; }
+              .new-entry-grid { grid-template-columns: 1fr 1fr; }
+            }
+            @media (max-width: 640px) {
+              .new-entry-grid { grid-template-columns: 1fr; }
+            }
           </style>
         </head>
         <body>
-          <h1>Telegram Bot Admin</h1>
+          <div class="topbar">
+            <div class="title-wrap">
+              <h1>Telegram Bot Admin</h1>
+              <small>Панель управления играми и игроками</small>
+            </div>
+            <button type="button" id="themeToggle" class="theme-toggle">🌙 Тема</button>
+          </div>
           <p class="hint">Веб-морда для просмотра и редактирования записей БД. После изменения нажмите "Сохранить".</p>
           ${query.saved ? `<div class="ok">Изменения сохранены: ${escapeHtml(query.saved)}</div>` : ''}
 
           <div class="card">
             <h2>Игры</h2>
+            <div class="hint">Редактирование игр в более компактном виде: слева основные параметры, справа состав и медиа.</div>
+            <form method="post" action="/admin/games" class="new-entry">
+              <h3>Добавить новую игру</h3>
+              <div class="new-entry-grid">
+                <div>
+                  <div class="small">Название</div>
+                  <input name="title" placeholder="Название игры" />
+                </div>
+                <div>
+                  <div class="small">Тип</div>
+                  <select name="type">
+                    <option value="DND">DND</option>
+                    <option value="MAFIA">MAFIA</option>
+                    <option value="OTHER">OTHER</option>
+                  </select>
+                </div>
+                <div>
+                  <div class="small">Статус</div>
+                  <select name="status">
+                    <option value="OPEN">Идет набор</option>
+                    <option value="FULL">Группа собрана</option>
+                    <option value="DONE">Игра завершена</option>
+                    <option value="CANCELLED">Отменена</option>
+                  </select>
+                </div>
+                <div>
+                  <div class="small">Старт (МСК)</div>
+                  <input type="datetime-local" name="starts_at" value="" />
+                </div>
+                <div>
+                  <div class="small">ГМ</div>
+                  <input name="gm_name" placeholder="@gm_username" />
+                </div>
+                <div>
+                  <div class="small">Лимит мест</div>
+                  <input name="registration_limit" placeholder="например 5" />
+                </div>
+                <div>
+                  <div class="small">Создатель (user_id)</div>
+                  <select name="created_by_user_id">
+                    ${allUsers
+                      .map((u) => `<option value="${u.id}">#${u.id} ${escapeHtml(u.username ? `@${u.username}` : String(u.telegram_id))}</option>`)
+                      .join('')}
+                  </select>
+                </div>
+                <div>
+                  <div class="small">image_file_id</div>
+                  <input name="image_file_id" placeholder="опционально" />
+                </div>
+                <div style="grid-column: span 2;">
+                  <div class="small">participant_slots_text</div>
+                  <input name="participant_slots_text" placeholder="опционально" />
+                </div>
+                <div style="grid-column: span 2;">
+                  <div class="small">registered_players_text (через запятую)</div>
+                  <input name="registered_players_text" placeholder="@user1, @user2" />
+                </div>
+                <div style="grid-column: span 4;">
+                  <div class="small">Описание</div>
+                  <textarea name="description" placeholder="Описание игры"></textarea>
+                </div>
+              </div>
+              <div style="margin-top: 8px;">
+                <button type="submit">Добавить игру</button>
+              </div>
+            </form>
             <table>
               <thead>
                 <tr>
                   <th>ID</th>
-                  <th>Название / тип / статус</th>
-                  <th>Старт / мастер</th>
-                  <th>Лимиты / игроки / анкеты</th>
-                  <th>Описание / image_file_id</th>
+                  <th>Основное</th>
+                  <th>Дата и мастер</th>
+                  <th>Состав</th>
+                  <th>Описание и медиа</th>
                   <th>Действия</th>
                 </tr>
               </thead>
@@ -393,6 +713,7 @@ export async function registerAdminRoutes(app: FastifyInstance) {
                         <form method="post" action="/admin/games/${game.id}">
                           <td class="mono">${game.id}</td>
                           <td>
+                            <div class="game-stack">
                             <input name="title" value="${escapeAttr(game.title)}" />
                             <div class="small">type</div>
                             <select name="type">
@@ -407,13 +728,17 @@ export async function registerAdminRoutes(app: FastifyInstance) {
                               ${selectOptionLabel(game.status, 'DONE', 'Игра завершена')}
                               ${selectOptionLabel(game.status, 'CANCELLED', 'Отменена')}
                             </select>
+                            </div>
                           </td>
                           <td>
+                            <div class="game-stack">
                             <input type="datetime-local" name="starts_at" value="${escapeAttr(toDateTimeLocal(game.starts_at))}" />
                             <div class="small">gm_name</div>
                             <input name="gm_name" value="${escapeAttr(game.gm_name ?? '')}" />
+                            </div>
                           </td>
                           <td>
+                            <div class="game-stack">
                             <div class="small">registration_limit</div>
                             <input name="registration_limit" value="${escapeAttr(game.registration_limit?.toString() ?? '')}" />
                             <div class="small">participant_slots_text</div>
@@ -422,12 +747,15 @@ export async function registerAdminRoutes(app: FastifyInstance) {
                             <textarea name="registered_players_text">${escapeHtml(game.registered_players_text ?? '')}</textarea>
                             <div class="small">submitted_sheet_users</div>
                             <input name="submitted_sheet_users" value="${escapeAttr(game.submitted_sheet_users ?? '')}" />
+                            </div>
                           </td>
                           <td>
+                            <div class="game-stack">
                             <div class="small">description</div>
                             <textarea name="description">${escapeHtml(game.description ?? '')}</textarea>
                             <div class="small">image_file_id</div>
                             <input name="image_file_id" value="${escapeAttr(game.image_file_id ?? '')}" />
+                            </div>
                           </td>
                           <td style="min-width: 170px;">
                             <button type="submit">Сохранить</button>
@@ -452,6 +780,59 @@ export async function registerAdminRoutes(app: FastifyInstance) {
 
           <div class="card">
             <h2>Пользователи</h2>
+            <form method="post" action="/admin/users" class="new-entry">
+              <h3>Добавить нового пользователя</h3>
+              <div class="new-entry-grid">
+                <div>
+                  <div class="small">Username</div>
+                  <input name="username" placeholder="@username" />
+                </div>
+                <div>
+                  <div class="small">Telegram ID (опц.)</div>
+                  <input name="telegram_id" placeholder="например 502302735" />
+                </div>
+                <div>
+                  <div class="small">Имя</div>
+                  <input name="first_name" placeholder="Имя" />
+                </div>
+                <div>
+                  <div class="small">Фамилия</div>
+                  <input name="last_name" placeholder="Фамилия" />
+                </div>
+                <div>
+                  <div class="small">Статус</div>
+                  <select name="user_status">
+                    <option value="Не зарегистрирован">Не зарегистрирован</option>
+                    <option value="Кандидат" selected>Кандидат</option>
+                    <option value="На проверке">На проверке</option>
+                    <option value="Одобрен">Одобрен</option>
+                    <option value="Бан">Бан</option>
+                  </select>
+                </div>
+                <div>
+                  <div class="small">Последняя игра (опц.)</div>
+                  <input type="datetime-local" name="last_game_at" value="" />
+                </div>
+                <div>
+                  <div class="small">Предупреждения</div>
+                  <input name="warnings_count" value="0" />
+                </div>
+                <div>
+                  <div class="small">Игр</div>
+                  <input name="games_count" value="0" />
+                </div>
+                <div>
+                  <div class="small">Admin</div>
+                  <select name="is_admin">
+                    <option value="0" selected>no</option>
+                    <option value="1">yes</option>
+                  </select>
+                </div>
+              </div>
+              <div style="margin-top: 8px;">
+                <button type="submit">Добавить пользователя</button>
+              </div>
+            </form>
             <table>
               <thead>
                 <tr>
@@ -524,6 +905,30 @@ export async function registerAdminRoutes(app: FastifyInstance) {
 
           <div class="card">
             <h2>Предупреждения (warnings_log)</h2>
+            <form method="post" action="/admin/warnings" class="new-entry">
+              <h3>Добавить новое предупреждение</h3>
+              <div class="new-entry-grid">
+                <div>
+                  <div class="small">Пользователь</div>
+                  <select name="user_id">
+                    ${allUsers
+                      .map((u) => `<option value="${u.id}">#${u.id} ${escapeHtml(u.username ? `@${u.username}` : String(u.telegram_id))}</option>`)
+                      .join('')}
+                  </select>
+                </div>
+                <div>
+                  <div class="small">Дата</div>
+                  <input type="datetime-local" name="created_at" value="" />
+                </div>
+                <div style="grid-column: span 2;">
+                  <div class="small">Причина</div>
+                  <input name="reason" placeholder="Причина предупреждения" />
+                </div>
+              </div>
+              <div style="margin-top: 8px;">
+                <button type="submit">Добавить</button>
+              </div>
+            </form>
             <table>
               <thead>
                 <tr>
@@ -535,22 +940,6 @@ export async function registerAdminRoutes(app: FastifyInstance) {
                 </tr>
               </thead>
               <tbody>
-                <tr>
-                  <form method="post" action="/admin/warnings">
-                    <td class="mono">new</td>
-                    <td>
-                      <input type="hidden" name="warning_id" value="" />
-                      <select name="user_id">
-                        ${allUsers
-                          .map((u) => `<option value="${u.id}">#${u.id} ${escapeHtml(u.username ? `@${u.username}` : String(u.telegram_id))}</option>`)
-                          .join('')}
-                      </select>
-                    </td>
-                    <td><input name="reason" placeholder="Причина предупреждения" /></td>
-                    <td><input type="datetime-local" name="created_at" value="" /></td>
-                    <td><button type="submit">Добавить</button></td>
-                  </form>
-                </tr>
                 ${allWarnings
                   .map(
                     (item) => `
@@ -594,6 +983,37 @@ export async function registerAdminRoutes(app: FastifyInstance) {
 
           <div class="card">
             <h2>Баны (bans_log)</h2>
+            <form method="post" action="/admin/bans" class="new-entry">
+              <h3>Добавить новый бан</h3>
+              <div class="new-entry-grid">
+                <div>
+                  <div class="small">Пользователь</div>
+                  <select name="user_id">
+                    ${allUsers
+                      .map((u) => `<option value="${u.id}">#${u.id} ${escapeHtml(u.username ? `@${u.username}` : String(u.telegram_id))}</option>`)
+                      .join('')}
+                  </select>
+                </div>
+                <div>
+                  <div class="small">Дата</div>
+                  <input type="datetime-local" name="created_at" value="" />
+                </div>
+                <div>
+                  <div class="small">Статус пользователя</div>
+                  <select name="set_status_banned">
+                    <option value="1" selected>Ставить Бан</option>
+                    <option value="0">Не менять</option>
+                  </select>
+                </div>
+                <div style="grid-column: span 1;">
+                  <div class="small">Причина</div>
+                  <input name="reason" placeholder="Причина бана" />
+                </div>
+              </div>
+              <div style="margin-top: 8px;">
+                <button type="submit">Добавить</button>
+              </div>
+            </form>
             <table>
               <thead>
                 <tr>
@@ -606,28 +1026,6 @@ export async function registerAdminRoutes(app: FastifyInstance) {
                 </tr>
               </thead>
               <tbody>
-                <tr>
-                  <form method="post" action="/admin/bans">
-                    <td class="mono">new</td>
-                    <td>
-                      <input type="hidden" name="ban_id" value="" />
-                      <select name="user_id">
-                        ${allUsers
-                          .map((u) => `<option value="${u.id}">#${u.id} ${escapeHtml(u.username ? `@${u.username}` : String(u.telegram_id))}</option>`)
-                          .join('')}
-                      </select>
-                    </td>
-                    <td><input name="reason" placeholder="Причина бана" /></td>
-                    <td><input type="datetime-local" name="created_at" value="" /></td>
-                    <td>
-                      <select name="set_status_banned">
-                        <option value="1" selected>Ставить Бан</option>
-                        <option value="0">Не менять</option>
-                      </select>
-                    </td>
-                    <td><button type="submit">Добавить</button></td>
-                  </form>
-                </tr>
                 ${allBans
                   .map(
                     (item) => `
@@ -677,6 +1075,12 @@ export async function registerAdminRoutes(app: FastifyInstance) {
 
           <div class="card">
             <h2>Регистрации</h2>
+            <div class="status-help">
+              <b>Пояснение статусов:</b><br/>
+              • <b>Подтвержден</b> — игрок в основном составе игры.<br/>
+              • <b>Лист ожидания</b> — мест нет, игрок в очереди.<br/>
+              • <b>Отменен</b> — запись снята игроком/админом и не участвует в наборе.
+            </div>
             <table>
               <thead>
                 <tr>
@@ -723,6 +1127,30 @@ export async function registerAdminRoutes(app: FastifyInstance) {
               </tbody>
             </table>
           </div>
+          <script>
+            (function () {
+              const key = 'tg_admin_theme';
+              const root = document.body;
+              const btn = document.getElementById('themeToggle');
+              const setTheme = function (theme) {
+                root.setAttribute('data-theme', theme);
+                if (btn) {
+                  btn.textContent = theme === 'dark' ? '☀️ Тема' : '🌙 Тема';
+                }
+              };
+              const saved = localStorage.getItem(key);
+              const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+              setTheme(saved || (prefersDark ? 'dark' : 'light'));
+              if (btn) {
+                btn.addEventListener('click', function () {
+                  const current = root.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
+                  const next = current === 'dark' ? 'light' : 'dark';
+                  setTheme(next);
+                  localStorage.setItem(key, next);
+                });
+              }
+            })();
+          </script>
         </body>
       </html>
     `;
@@ -778,6 +1206,20 @@ function formatHumanDate(value: string) {
 function parseNullableInt(value?: string) {
   const normalized = (value ?? '').trim();
   if (!normalized) {
+    return null;
+  }
+
+  const parsed = Number.parseInt(normalized, 10);
+  return Number.isNaN(parsed) ? null : parsed;
+}
+
+function parseTelegramId(value?: string) {
+  const normalized = (value ?? '').trim();
+  if (!normalized) {
+    return null;
+  }
+
+  if (!/^-?\d+$/.test(normalized)) {
     return null;
   }
 

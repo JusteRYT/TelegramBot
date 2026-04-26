@@ -228,9 +228,26 @@ export class PublicCommandService {
     ];
 
     const next = ranks.find((rank) => rank.minGames > gamesCount);
-    return next
-      ? `📈 До ранга <b>${next.name}</b> осталось игр: <code>${next.minGames - gamesCount}</code>`
-      : '🏁 Вы достигли максимального ранга!';
+    if (!next) {
+      return `✨ <b>Легендарный уровень</b>\n🟦🟦🟦🟦🟦🟦🟦🟦🟦🟦 <b>100%</b>`;
+    }
+
+    const current = this.getRank(gamesCount);
+    const range = Math.max(1, next.minGames - current.minGames);
+    const progress = Math.max(0, gamesCount - current.minGames);
+    const percent = Math.floor((progress / range) * 100);
+    const bar = this.buildProgressBar(percent);
+    const left = Math.max(0, next.minGames - gamesCount);
+
+    return `📈 <b>Прогресс до ранга ${next.name}:</b>\n${bar} <b>${percent}%</b>\nДо следующего ранга: <code>${left}</code> игр`;
+  }
+
+  private buildProgressBar(percent: number) {
+    const size = 10;
+    const clamped = Math.max(0, Math.min(100, percent));
+    const filled = Math.round((clamped * size) / 100);
+    const empty = size - filled;
+    return `${'🟦'.repeat(filled)}${'⬜️'.repeat(empty)}`;
   }
 
   private formatRussianDate(date: Date) {

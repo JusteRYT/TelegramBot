@@ -8,6 +8,7 @@ import { RegistrationService } from './registration.service';
 import { AnnouncementService } from './announcement.service';
 import { AdminCommandService } from './admin-command.service';
 import { PlayerAccessService } from './player-access.service';
+import { GameService } from './game.service';
 
 export class CallbackQueryService {
   constructor(
@@ -18,6 +19,7 @@ export class CallbackQueryService {
     private readonly announcements = new AnnouncementService(bot),
     private readonly playerAccess = new PlayerAccessService(),
     private readonly users = new UserRepository(),
+    private readonly games = new GameService(),
   ) {}
 
   async handle(
@@ -201,6 +203,60 @@ export class CallbackQueryService {
     });
     if (result.ok) {
       await this.announcements.refreshGame(gameId);
+      await this.notifyGmAboutRegistration(gameId, user.id, telegramUserId, result.registration?.status);
+    }
+  }
+
+  private async notifyGmAboutRegistration(
+    gameId: number,
+    userId: number,
+    telegramUserId: number,
+    registrationStatus?: string,
+  ) {
+    const game = this.games.getById(gameId);
+    if (!game) {
+      return;
+    }
+
+    const player = this.users.findById(userId);
+    const playerTag = player?.username ? `@${player.username}` : `id:${telegramUserId}`;
+    const playerName = [player?.first_name ?? '', player?.last_name ?? ''].join(' ').trim();
+    const registrationLabel = registrationStatus === 'WAITLIST' ? 'Лист ожидания' : 'Подтвержден';
+
+    const recipients = new Set<number>();
+    const createdBy = this.users.findById(game.created_by_user_id);
+    if (createdBy?.telegram_id) {
+      recipients.add(createdBy.telegram_id);
+    }
+
+    const gmMention = (game.gm_name ?? '').trim();
+    if (gmMention.startsWith('@')) {
+      const gm = this.users.findByUsername(gmMention);
+      if (gm?.telegram_id) {
+        recipients.add(gm.telegram_id);
+      }
+    }
+
+    if (recipients.size === 0) {
+      return;
+    }
+
+    const text =
+      `🔔 <b>Новая регистрация на игру</b>\n\n` +
+      `🎮 <b>Игра:</b> ${game.title}\n` +
+      `👤 <b>Игрок:</b> ${playerTag}${playerName ? ` (${playerName})` : ''}\n` +
+      `📌 <b>Статус:</b> ${registrationLabel}`;
+
+    for (const recipientTelegramId of recipients) {
+      if (recipientTelegramId === telegramUserId) {
+        continue;
+      }
+
+      try {
+        await this.bot.api.sendMessage(recipientTelegramId, text, { parse_mode: 'HTML' });
+      } catch (error) {
+        console.warn(`Failed to notify GM about registration for game #${gameId}:`, error);
+      }
     }
   }
 }

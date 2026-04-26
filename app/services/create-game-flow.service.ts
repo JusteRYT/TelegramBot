@@ -140,16 +140,20 @@ export class CreateGameFlowService {
         await this.next(ctx, state, '📅 <b>Шаг 5: Дата</b>\nКогда играем? (ДД.ММ):');
         return;
       case 'DATE':
-        if (!/^\d{1,2}\.\d{1,2}$/.test(text)) {
-          await this.replyStep(ctx, '❌ Формат ДД.ММ (напр. 25.12):');
+        if (!this.parseDateInput(text)) {
+          await this.replyStep(ctx, '❌ Некорректная дата. Формат: ДД.ММ (напр. 25.12)');
           return;
         }
-        state.gameData.date = text;
+        state.gameData.date = this.normalizeDateInput(text);
         state.step = 'TIME';
         await this.next(ctx, state, '⏰ <b>Шаг 6: Время</b>\nВо сколько старт? (напр. 19:00):');
         return;
       case 'TIME':
-        state.gameData.time = text;
+        if (!this.parseTimeInput(text)) {
+          await this.replyStep(ctx, '❌ Некорректное время. Используйте формат ЧЧ:ММ (например 19:00)');
+          return;
+        }
+        state.gameData.time = this.normalizeTimeInput(text);
         state.step = 'IMAGE';
         await this.next(ctx, state, '🖼 <b>Шаг 7: Атмосфера</b>\nПришлите <b>картинку</b> или напишите <b>-</b>');
         return;
@@ -183,16 +187,20 @@ export class CreateGameFlowService {
         await this.next(ctx, state, '📅 <b>Шаг 2: Дата</b>\nКогда собираемся? (ДД.ММ):');
         return;
       case 'DATE':
-        if (!/^\d{1,2}\.\d{1,2}$/.test(text)) {
-          await this.replyStep(ctx, '❌ Формат ДД.ММ (напр. 25.12):');
+        if (!this.parseDateInput(text)) {
+          await this.replyStep(ctx, '❌ Некорректная дата. Формат: ДД.ММ (напр. 25.12)');
           return;
         }
-        state.gameData.date = text;
+        state.gameData.date = this.normalizeDateInput(text);
         state.step = 'TIME';
         await this.next(ctx, state, '⏰ <b>Шаг 3: Время</b>\nВо сколько старт? (напр. 19:00):');
         return;
       case 'TIME':
-        state.gameData.time = text;
+        if (!this.parseTimeInput(text)) {
+          await this.replyStep(ctx, '❌ Некорректное время. Используйте формат ЧЧ:ММ (например 19:00)');
+          return;
+        }
+        state.gameData.time = this.normalizeTimeInput(text);
         state.step = 'PARTICIPANTS';
         await this.next(ctx, state, '👥 <b>Шаг 4: Вместимость</b>\nСколько мест доступно? (например: 10):');
         return;
@@ -230,6 +238,13 @@ export class CreateGameFlowService {
     }
 
     const startsAtInput = this.toStartsAtInput(state.gameData.date, state.gameData.time);
+    if (!startsAtInput) {
+      await ctx.reply('❌ Не удалось распознать дату/время. Проверьте формат и попробуйте /create заново.', {
+        parse_mode: 'HTML',
+      });
+      this.sessions.clear(ctx.from.id);
+      return;
+    }
     const result = this.games.createGame({
       type: state.gameData.type ?? 'DND',
       title: state.gameData.title,
@@ -317,10 +332,80 @@ export class CreateGameFlowService {
   }
 
   private toStartsAtInput(dateInput: string, timeInput: string) {
-    const [day, month] = dateInput.split('.').map((item) => Number.parseInt(item, 10));
-    const [hours, minutes] = timeInput.replace('.', ':').split(':').map((item) => Number.parseInt(item, 10));
+    const parsedDate = this.parseDateInput(dateInput);
+    const parsedTime = this.parseTimeInput(timeInput);
+    if (!parsedDate || !parsedTime) {
+      return null;
+    }
+
+    const { day, month } = parsedDate;
+    const { hours, minutes } = parsedTime;
     const year = new Date().getFullYear();
     const date = new Date(year, month - 1, day, hours, minutes, 0, 0);
+    if (
+      date.getFullYear() !== year ||
+      date.getMonth() !== month - 1 ||
+      date.getDate() !== day ||
+      date.getHours() !== hours ||
+      date.getMinutes() !== minutes
+    ) {
+      return null;
+    }
+
     return date.toISOString().replace('T', ' ').slice(0, 16);
+  }
+
+  private parseDateInput(input: string) {
+    const match = input.trim().match(/^(\d{1,2})\.(\d{1,2})$/);
+    if (!match) {
+      return null;
+    }
+
+    const day = Number.parseInt(match[1], 10);
+    const month = Number.parseInt(match[2], 10);
+    if (month < 1 || month > 12 || day < 1 || day > 31) {
+      return null;
+    }
+
+    const year = new Date().getFullYear();
+    const probe = new Date(year, month - 1, day);
+    if (probe.getMonth() !== month - 1 || probe.getDate() !== day) {
+      return null;
+    }
+
+    return { day, month };
+  }
+
+  private parseTimeInput(input: string) {
+    const match = input.trim().match(/^(\d{1,2})[:.](\d{2})$/);
+    if (!match) {
+      return null;
+    }
+
+    const hours = Number.parseInt(match[1], 10);
+    const minutes = Number.parseInt(match[2], 10);
+    if (hours < 0 || hours > 23 || minutes < 0 || minutes > 59) {
+      return null;
+    }
+
+    return { hours, minutes };
+  }
+
+  private normalizeDateInput(input: string) {
+    const parsed = this.parseDateInput(input);
+    if (!parsed) {
+      return input.trim();
+    }
+
+    return `${String(parsed.day).padStart(2, '0')}.${String(parsed.month).padStart(2, '0')}`;
+  }
+
+  private normalizeTimeInput(input: string) {
+    const parsed = this.parseTimeInput(input);
+    if (!parsed) {
+      return input.trim();
+    }
+
+    return `${String(parsed.hours).padStart(2, '0')}:${String(parsed.minutes).padStart(2, '0')}`;
   }
 }

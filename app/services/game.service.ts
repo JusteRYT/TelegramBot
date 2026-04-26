@@ -106,6 +106,10 @@ export class GameService {
     return this.games.findById(id);
   }
 
+  getDetailedById(id: number) {
+    return this.listAllDetailed().find((game) => game.id === id) ?? null;
+  }
+
   getDisplayPlayers(gameId: number) {
     const game = this.games.findById(gameId);
     return game ? this.extractDisplayPlayers(game) : null;
