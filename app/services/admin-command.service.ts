@@ -337,6 +337,10 @@ export class AdminCommandService {
     return this.createFlow.applyTypeSelection(telegramUserId, type);
   }
 
+  handleCreateModeCallback(telegramUserId: number, mode: 'OPEN' | 'CLOSED') {
+    return this.createFlow.applyRegistrationModeSelection(telegramUserId, mode);
+  }
+
   async handleApprove(ctx: BotContextLike, gameIdText: string) {
     if (!ctx.from) {
       return;
@@ -453,24 +457,35 @@ export class AdminCommandService {
     }
 
     const gameId = Number.parseInt(gameIdText, 10);
-    const ok = !Number.isNaN(gameId) && this.games.cancelGame(gameId);
+    if (Number.isNaN(gameId)) {
+      await ctx.reply('❌ <b>Некорректный ID.</b>\nИспользуйте: <code>/cancel 12</code>', { parse_mode: 'HTML' });
+      return;
+    }
+
+    const game = this.games.getById(gameId);
+    const ok = this.games.cancelGame(gameId);
     if (ok) {
       await this.announcements.refreshGame(gameId, '⚠️ <b>Игра отменена мастером.</b>');
     }
-    await ctx.reply(ok ? '❌ Игра отменена.' : '❌ Ошибка ID.');
+    await ctx.reply(
+      ok
+        ? `❌ <b>Игра отменена.</b>\n\n🎮 <b>${game?.title ?? `#${gameId}`}</b> переведена в статус <code>CANCELLED</code>.`
+        : '❌ <b>Игра не найдена.</b>\nПроверьте ID через <code>/all</code>.',
+      { parse_mode: 'HTML' },
+    );
   }
 
   async handleDelete(ctx: BotContextLike, gameIdText: string) {
     try {
       const gameId = Number.parseInt(gameIdText, 10);
       if (Number.isNaN(gameId)) {
-        await ctx.reply('❌ Ошибка ID.');
+        await ctx.reply('❌ <b>Некорректный ID.</b>\nИспользуйте: <code>/delete 12</code>', { parse_mode: 'HTML' });
         return;
       }
 
       const game = this.games.getById(gameId);
       if (!game) {
-        await ctx.reply('❌ Ошибка ID.');
+        await ctx.reply('❌ <b>Игра не найдена.</b>\nПроверьте ID через <code>/all</code>.', { parse_mode: 'HTML' });
         return;
       }
 
@@ -479,7 +494,12 @@ export class AdminCommandService {
       }
 
       const ok = this.games.deleteGame(gameId);
-      await ctx.reply(ok ? '✅ Удалено.' : '❌ Ошибка ID.');
+      await ctx.reply(
+        ok
+          ? `✅ <b>Игра удалена из системы.</b>\n\n🧾 ID: <code>${gameId}</code>\n🎮 Название: <b>${game.title}</b>\n🧹 Связанные записи анонса очищены.`
+          : '❌ <b>Не удалось удалить игру.</b>\nПроверьте связанные записи.',
+        { parse_mode: 'HTML' },
+      );
     } catch (error) {
       console.error('Failed to delete game:', error);
       await ctx.reply('❌ Не удалось удалить игру. Проверьте связанные записи.');
@@ -488,12 +508,23 @@ export class AdminCommandService {
 
   async handleStartNow(ctx: BotContextLike, gameIdText: string) {
     const gameId = Number.parseInt(gameIdText, 10);
-    const ok = !Number.isNaN(gameId) && this.games.startGameNow(gameId);
+    if (Number.isNaN(gameId)) {
+      await ctx.reply('❌ <b>Некорректный ID.</b>\nИспользуйте: <code>/start_now 12</code>', { parse_mode: 'HTML' });
+      return;
+    }
+
+    const game = this.games.getById(gameId);
+    const ok = this.games.startGameNow(gameId);
     if (ok) {
       await this.announcements.refreshGame(gameId);
       await this.announcements.sendStartedNow(gameId);
     }
-    await ctx.reply(ok ? '🚀 Поехали!' : '❌ Ошибка ID.');
+    await ctx.reply(
+      ok
+        ? `🚀 <b>Игра запущена прямо сейчас!</b>\n\n🎮 <b>${game?.title ?? `#${gameId}`}</b>\n📌 Статус: <code>DONE</code>\n📣 Участники получили стартовое уведомление.`
+        : '❌ <b>Игра не найдена.</b>\nПроверьте ID через <code>/all</code>.',
+      { parse_mode: 'HTML' },
+    );
   }
 
   async handleStateMessage(ctx: BotContextLike, state: WizardState, userId: number) {

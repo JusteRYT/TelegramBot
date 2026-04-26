@@ -96,6 +96,10 @@ export class CreateGameFlowService {
   }
 
   private async handleDnd(ctx: BotContextLike, state: CreateWizardState, createdByUserId: number) {
+    if (!ctx.from) {
+      return;
+    }
+
     const text = ctx.message?.text?.trim() ?? '';
 
     switch (state.step) {
@@ -107,7 +111,19 @@ export class CreateGameFlowService {
       case 'GM_CHOICE':
         state.gameData.gmName = text.toLowerCase() === 'я' ? `@${ctx.from?.username || ctx.from?.first_name}` : text;
         state.step = 'TYPE';
-        await this.next(ctx, state, '🧩 <b>Шаг 3: Тип игры</b>\n\n1 — <b>Открытая</b> (набор игроков)\n2 — <b>Закрытая</b> (состав готов)');
+        this.sessions.set(ctx.from.id, state);
+        await ctx.reply(
+          '🧩 <b>Шаг 3: Тип игры</b>\n\nВыберите формат партии:',
+          {
+            parse_mode: 'HTML',
+            reply_markup: {
+              inline_keyboard: [
+                [{ text: '🔓 Открытая (набор игроков)', callback_data: 'create_mode_open' }],
+                [{ text: '🔒 Закрытая (готовый состав)', callback_data: 'create_mode_closed' }],
+              ],
+            },
+          },
+        );
         return;
       case 'TYPE':
         if (text === '1') {
@@ -328,6 +344,31 @@ export class CreateGameFlowService {
     return {
       ok: true as const,
       prompt: "🕴️ <b>Создание Мафии</b>\n\nШаг 1: Введите тематику вечера (или просто 'Мафия'):",
+    };
+  }
+
+  applyRegistrationModeSelection(telegramUserId: number, mode: 'OPEN' | 'CLOSED') {
+    const state = this.sessions.get(telegramUserId);
+    if (!state || state.flow !== 'CREATE' || state.step !== 'TYPE' || state.gameType !== 'DND') {
+      return { ok: false as const };
+    }
+
+    if (mode === 'OPEN') {
+      state.gameData.openRegistration = true;
+      state.step = 'PARTICIPANTS';
+      this.sessions.set(telegramUserId, state);
+      return {
+        ok: true as const,
+        prompt: '👥 <b>Шаг 4: Вместимость</b>\nСколько мест доступно? (1-5):',
+      };
+    }
+
+    state.gameData.openRegistration = false;
+    state.step = 'PARTICIPANTS';
+    this.sessions.set(telegramUserId, state);
+    return {
+      ok: true as const,
+      prompt: '👥 <b>Шаг 4: Состав</b>\nПеречислите игроков через запятую:',
     };
   }
 

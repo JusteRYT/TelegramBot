@@ -55,6 +55,26 @@ export class CallbackQueryService {
       return;
     }
 
+    if (data === 'create_mode_open' || data === 'create_mode_closed') {
+      const mode = data === 'create_mode_open' ? 'OPEN' : 'CLOSED';
+      const result = this.adminCommands.handleCreateModeCallback(from.id, mode);
+      if (!result.ok) {
+        await this.bot.api.answerCallbackQuery(callbackQueryId, {
+          text: 'Сессия истекла. Начните заново: /create',
+          show_alert: true,
+        });
+        return;
+      }
+
+      await this.bot.api.sendMessage(chatId ?? env.ADMIN_CHAT_ID, result.prompt, {
+        parse_mode: 'HTML',
+        message_thread_id: (threadId ?? env.ADMIN_TOPIC_ID) || undefined,
+        reply_markup: { force_reply: true },
+      });
+      await this.bot.api.answerCallbackQuery(callbackQueryId, { text: 'Режим выбран ✅' });
+      return;
+    }
+
     if (data.startsWith('guide_')) {
       await this.bot.api.sendMessage(from.id, this.publicCommands.getGuideResponse(data), {
         parse_mode: 'HTML',
