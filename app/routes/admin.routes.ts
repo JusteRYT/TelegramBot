@@ -532,10 +532,10 @@ export async function registerAdminRoutes(app: FastifyInstance) {
               padding: 14px;
               margin-bottom: 14px;
               box-shadow: var(--shadow);
-              overflow-x: auto;
-              transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease;
+              overflow: visible;
+              transition: box-shadow .2s ease, border-color .2s ease;
             }
-            .card:hover { transform: translateY(-1px); border-color: color-mix(in srgb, var(--accent) 35%, var(--line)); }
+            .card:hover { border-color: color-mix(in srgb, var(--accent) 35%, var(--line)); }
             .section-head {
               display: flex;
               align-items: center;
