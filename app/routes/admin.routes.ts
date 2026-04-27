@@ -533,13 +533,22 @@ export async function registerAdminRoutes(app: FastifyInstance) {
               margin-bottom: 14px;
               box-shadow: var(--shadow);
               overflow-x: auto;
+              transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease;
             }
+            .card:hover { transform: translateY(-1px); border-color: color-mix(in srgb, var(--accent) 35%, var(--line)); }
             .section-head {
               display: flex;
               align-items: center;
               justify-content: space-between;
               gap: 10px;
               margin-bottom: 8px;
+            }
+            .section-tools { margin-bottom: 10px; }
+            .filter-input {
+              max-width: 420px;
+              width: 100%;
+              padding: 8px 10px;
+              border-radius: 10px;
             }
             .hint { color: var(--muted); margin: 0 0 12px 0; }
             .ok {
@@ -598,7 +607,9 @@ export async function registerAdminRoutes(app: FastifyInstance) {
               padding: 7px 11px;
               cursor: pointer;
               font-weight: 600;
+              transition: transform .16s ease, filter .16s ease, box-shadow .16s ease;
             }
+            button:hover { transform: translateY(-1px); filter: brightness(1.03); }
             .btn-secondary {
               background: var(--accent-soft);
               color: var(--text);
@@ -612,21 +623,93 @@ export async function registerAdminRoutes(app: FastifyInstance) {
             .nowrap { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
             .game-stack { display: grid; gap: 6px; }
             .pair-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
-            .desc-preview {
-              background: var(--surface-2);
-              border: 1px solid var(--line);
-              border-radius: 8px;
-              padding: 8px 10px;
-              white-space: pre-wrap;
-              word-break: break-word;
-              line-height: 1.45;
-              max-height: 130px;
-              overflow: auto;
-            }
             .desc-editor {
               min-height: 120px;
               line-height: 1.45;
             }
+            .games-list { display: grid; gap: 8px; }
+            .game-item {
+              display: grid;
+              grid-template-columns: 72px 1.6fr 1fr 1fr auto;
+              gap: 10px;
+              align-items: center;
+              border: 1px solid var(--line);
+              border-radius: 10px;
+              background: var(--surface-2);
+              padding: 10px 12px;
+              transition: transform .18s ease, border-color .18s ease, box-shadow .18s ease;
+            }
+            .game-item:hover { transform: translateY(-1px); border-color: color-mix(in srgb, var(--accent) 35%, var(--line)); box-shadow: 0 8px 22px rgba(30, 60, 120, 0.16); }
+            .game-item-title { font-weight: 700; }
+            .game-item-meta { color: var(--muted); font-size: 12px; }
+            .modal-overlay {
+              position: fixed;
+              inset: 0;
+              background: rgba(8, 14, 26, 0.7);
+              backdrop-filter: blur(2px);
+              display: none;
+              align-items: center;
+              justify-content: center;
+              padding: 16px;
+              z-index: 100;
+            }
+            .modal-overlay.open { display: flex; animation: overlayFade .18s ease; }
+            .modal-card {
+              width: min(940px, 100%);
+              max-height: 90vh;
+              overflow: auto;
+              background: var(--surface);
+              border: 1px solid var(--line);
+              border-radius: 14px;
+              box-shadow: var(--shadow);
+              padding: 14px;
+              animation: modalIn .22s ease;
+            }
+            .modal-head {
+              display: flex;
+              align-items: center;
+              justify-content: space-between;
+              gap: 10px;
+              margin-bottom: 10px;
+            }
+            .close-btn {
+              background: var(--surface-2);
+              color: var(--text);
+              border: 1px solid var(--line);
+              border-radius: 8px;
+              padding: 5px 10px;
+            }
+            .modal-actions {
+              display: flex;
+              gap: 8px;
+              flex-wrap: wrap;
+              justify-content: flex-end;
+              margin-top: 6px;
+              padding-top: 8px;
+              border-top: 1px solid var(--line);
+            }
+            .btn-close-strong {
+              background: #7c3aed;
+              color: #fff;
+            }
+            body[data-theme="dark"] .btn-close-strong {
+              background: #a78bfa;
+              color: #111827;
+            }
+            .entity-list { display: grid; gap: 8px; }
+            .entity-item {
+              display: grid;
+              gap: 10px;
+              grid-template-columns: 70px 1.5fr 1fr 1fr auto;
+              align-items: center;
+              border: 1px solid var(--line);
+              background: var(--surface-2);
+              border-radius: 10px;
+              padding: 10px 12px;
+              transition: transform .18s ease, border-color .18s ease, box-shadow .18s ease;
+            }
+            .entity-item:hover { transform: translateY(-1px); border-color: color-mix(in srgb, var(--accent) 35%, var(--line)); box-shadow: 0 8px 22px rgba(30, 60, 120, 0.16); }
+            .entity-title { font-weight: 700; }
             .new-entry {
               background: var(--surface-2);
               border: 1px dashed var(--line);
@@ -647,6 +730,8 @@ export async function registerAdminRoutes(app: FastifyInstance) {
               font-size: 12px;
               color: var(--text);
             }
+            @keyframes overlayFade { from { opacity: 0; } to { opacity: 1; } }
+            @keyframes modalIn { from { opacity: 0; transform: translateY(8px) scale(.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
             @media (max-width: 920px) {
               body { padding: 10px; }
               .topbar { position: static; }
@@ -656,6 +741,8 @@ export async function registerAdminRoutes(app: FastifyInstance) {
               .new-entry-grid { grid-template-columns: 1fr; }
               .section-head { flex-direction: column; align-items: flex-start; }
               .pair-grid { grid-template-columns: 1fr; }
+              .game-item { grid-template-columns: 1fr; }
+              .entity-item { grid-template-columns: 1fr; }
             }
           </style>
         </head>
@@ -676,6 +763,9 @@ export async function registerAdminRoutes(app: FastifyInstance) {
               <button type="button" class="btn-secondary" data-toggle="createGameForm">+ Добавить игру</button>
             </div>
             <div class="hint">Редактирование игр в более компактном виде: слева основные параметры, справа состав и медиа.</div>
+            <div class="section-tools">
+              <input class="filter-input" type="search" placeholder="Поиск по играм: название, ГМ, тип, статус..." data-filter-input="gamesList" />
+            </div>
             <form method="post" action="/admin/games" class="new-entry collapsible-form" id="createGameForm">
               <h3>Добавить новую игру</h3>
               <div class="new-entry-grid">
@@ -741,42 +831,51 @@ export async function registerAdminRoutes(app: FastifyInstance) {
                 <button type="submit">Добавить игру</button>
               </div>
             </form>
-            <table>
-              <colgroup>
-                <col style="width: 70px;" />
-                <col style="width: 280px;" />
-                <col style="width: 190px;" />
-                <col style="width: 210px;" />
-                <col style="width: 330px;" />
-                <col style="width: 280px;" />
-                <col style="width: 160px;" />
-              </colgroup>
-              <thead>
-                <tr>
-                  <th>ID</th>
-                  <th>Игра</th>
-                  <th>Дата и время</th>
-                  <th>Мастер (ГМ)</th>
-                  <th>Набор и участники</th>
-                  <th>Описание и медиа</th>
-                  <th>Действия</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${allGames
-                  .map((game) => {
-                    const formId = `game-form-${game.id}`;
-                    return `
-                      <tr>
-                        <td class="mono">${game.id}<form id="${formId}" method="post" action="/admin/games/${game.id}"></form></td>
-                        <td>
-                          <div class="game-stack">
-                          <div class="small">Название</div>
-                          <input form="${formId}" name="title" value="${escapeAttr(game.title)}" />
+            <div class="games-list" id="gamesList">
+              ${allGames
+                .map((game) => {
+                  const modalId = `game-modal-${game.id}`;
+                  const filterValue = `${game.id} ${game.title} ${game.type} ${getGameStatusLabel(game.status)} ${game.gm_name ?? ''} ${formatHumanDate(game.starts_at)}`;
+                  return `
+                    <div class="game-item" data-filter="${escapeAttr(filterValue)}">
+                      <div class="mono">#${game.id}</div>
+                      <div>
+                        <div class="game-item-title">${escapeHtml(game.title)}</div>
+                        <div class="game-item-meta">${escapeHtml(game.type)} • ${escapeHtml(getGameStatusLabel(game.status))}</div>
+                      </div>
+                      <div>
+                        <div class="game-item-meta">Дата</div>
+                        <div>${escapeHtml(formatHumanDate(game.starts_at))}</div>
+                      </div>
+                      <div>
+                        <div class="game-item-meta">ГМ</div>
+                        <div>${escapeHtml(game.gm_name ?? '—')}</div>
+                      </div>
+                      <div>
+                        <button type="button" class="btn-secondary" data-open-modal="${modalId}">Открыть карточку</button>
+                      </div>
+                    </div>
+
+                    <div class="modal-overlay" id="${modalId}" aria-hidden="true">
+                      <div class="modal-card">
+                        <div class="modal-head">
+                          <h3>Игра #${game.id} — ${escapeHtml(game.title)}</h3>
+                        </div>
+                        <form method="post" action="/admin/games/${game.id}" class="game-stack">
+                          <div class="pair-grid">
+                            <div>
+                              <div class="small">Название</div>
+                              <input name="title" value="${escapeAttr(game.title)}" />
+                            </div>
+                            <div>
+                              <div class="small">Дата и время (МСК)</div>
+                              <input type="datetime-local" name="starts_at" value="${escapeAttr(toDateTimeLocal(game.starts_at))}" />
+                            </div>
+                          </div>
                           <div class="pair-grid">
                             <div>
                               <div class="small">Тип игры</div>
-                              <select form="${formId}" name="type">
+                              <select name="type">
                                 ${selectOption(game.type, 'DND')}
                                 ${selectOption(game.type, 'MAFIA')}
                                 ${selectOption(game.type, 'OTHER')}
@@ -784,7 +883,7 @@ export async function registerAdminRoutes(app: FastifyInstance) {
                             </div>
                             <div>
                               <div class="small">Статус набора</div>
-                              <select form="${formId}" name="status">
+                              <select name="status">
                                 ${selectOptionLabel(game.status, 'OPEN', 'Идет набор')}
                                 ${selectOptionLabel(game.status, 'FULL', 'Группа собрана')}
                                 ${selectOptionLabel(game.status, 'DONE', 'Игра завершена')}
@@ -792,53 +891,41 @@ export async function registerAdminRoutes(app: FastifyInstance) {
                               </select>
                             </div>
                           </div>
+                          <div class="pair-grid">
+                            <div>
+                              <div class="small">Мастер (ГМ)</div>
+                              <input name="gm_name" value="${escapeAttr(game.gm_name ?? '')}" />
+                            </div>
+                            <div>
+                              <div class="small">ID изображения (Telegram)</div>
+                              <input name="image_file_id" value="${escapeAttr(game.image_file_id ?? '')}" />
+                            </div>
                           </div>
-                        </td>
-                        <td>
-                          <div class="game-stack">
-                          <div class="small">Дата и время (МСК)</div>
-                          <input form="${formId}" type="datetime-local" name="starts_at" value="${escapeAttr(toDateTimeLocal(game.starts_at))}" />
-                          </div>
-                        </td>
-                        <td>
-                          <div class="game-stack">
-                          <div class="small">Имя мастера / @username</div>
-                          <input form="${formId}" name="gm_name" value="${escapeAttr(game.gm_name ?? '')}" />
-                          </div>
-                        </td>
-                        <td>
-                          <div class="game-stack">
                           <div class="pair-grid">
                             <div>
                               <div class="small">Лимит мест</div>
-                              <input form="${formId}" name="registration_limit" value="${escapeAttr(game.registration_limit?.toString() ?? '')}" />
+                              <input name="registration_limit" value="${escapeAttr(game.registration_limit?.toString() ?? '')}" />
                             </div>
                             <div>
                               <div class="small">Текст мест в анонсе</div>
-                              <input form="${formId}" name="participant_slots_text" value="${escapeAttr(game.participant_slots_text ?? '')}" />
+                              <input name="participant_slots_text" value="${escapeAttr(game.participant_slots_text ?? '')}" />
                             </div>
                           </div>
-                          <div class="small">Участники (через запятую)</div>
-                          <textarea form="${formId}" name="registered_players_text">${escapeHtml(game.registered_players_text ?? '')}</textarea>
-                          <div class="small">Сдавшие анкеты (через запятую)</div>
-                          <input form="${formId}" name="submitted_sheet_users" value="${escapeAttr(game.submitted_sheet_users ?? '')}" />
+                          <div>
+                            <div class="small">Участники (через запятую)</div>
+                            <textarea name="registered_players_text">${escapeHtml(game.registered_players_text ?? '')}</textarea>
                           </div>
-                        </td>
-                         <td>
-                         <div class="game-stack">
-                          <div class="small">Описание объявления (предпросмотр)</div>
-                          <div class="desc-preview">${escapeHtml(game.description ?? 'Описание пока не задано')}</div>
-                          <div class="small">Редактирование описания</div>
-                          <textarea form="${formId}" name="description" class="desc-editor">${escapeHtml(game.description ?? '')}</textarea>
-                          <div class="small">ID изображения (Telegram)</div>
-                          <input form="${formId}" name="image_file_id" value="${escapeAttr(game.image_file_id ?? '')}" />
+                          <div>
+                            <div class="small">Сдавшие анкеты (через запятую)</div>
+                            <input name="submitted_sheet_users" value="${escapeAttr(game.submitted_sheet_users ?? '')}" />
                           </div>
-                        </td>
-                        <td>
-                          <div class="row-actions">
-                            <button form="${formId}" type="submit">Сохранить</button>
+                          <div>
+                            <div class="small">Описание объявления</div>
+                            <textarea name="description" class="desc-editor">${escapeHtml(game.description ?? '')}</textarea>
+                          </div>
+                          <div class="modal-actions">
+                            <button type="submit">Сохранить</button>
                             <button
-                              form="${formId}"
                               type="submit"
                               formaction="/admin/games/${game.id}/delete"
                               formmethod="post"
@@ -847,20 +934,24 @@ export async function registerAdminRoutes(app: FastifyInstance) {
                             >
                               Удалить
                             </button>
+                            <button type="button" class="btn-close-strong" data-close-modal="${modalId}">Закрыть</button>
                           </div>
-                        </td>
-                      </tr>
-                    `;
-                  })
-                  .join('')}
-              </tbody>
-            </table>
+                        </form>
+                      </div>
+                    </div>
+                  `;
+                })
+                .join('')}
+            </div>
           </div>
 
           <div class="card">
             <div class="section-head">
               <h2>Пользователи</h2>
               <button type="button" class="btn-secondary" data-toggle="createUserForm">+ Добавить пользователя</button>
+            </div>
+            <div class="section-tools">
+              <input class="filter-input" type="search" placeholder="Поиск по пользователям: username, имя, статус, ID..." data-filter-input="usersList" />
             </div>
             <form method="post" action="/admin/users" class="new-entry collapsible-form" id="createUserForm">
               <h3>Добавить нового пользователя</h3>
@@ -915,80 +1006,90 @@ export async function registerAdminRoutes(app: FastifyInstance) {
                 <button type="submit">Добавить пользователя</button>
               </div>
             </form>
-            <table>
-              <thead>
-                <tr>
-                  <th>ID</th>
-                  <th>Telegram</th>
-                  <th>Username</th>
-                  <th>Имя</th>
-                  <th>Фамилия</th>
-                  <th>В базе с</th>
-                  <th>Статус</th>
-                  <th>Last game</th>
-                  <th>Warn</th>
-                  <th>Games</th>
-                  <th>Admin</th>
-                  <th>Действия</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${allUsers
-                  .map(
-                    (user) => `
-                      <tr>
-                        <form method="post" action="/admin/users/${user.id}">
-                          <td class="mono nowrap">${user.id}</td>
-                          <td class="mono nowrap">${user.telegram_id}</td>
-                          <td><input name="username" value="${escapeAttr(user.username ?? '')}" /></td>
-                          <td><input name="first_name" value="${escapeAttr(user.first_name ?? '')}" /></td>
-                          <td><input name="last_name" value="${escapeAttr(user.last_name ?? '')}" /></td>
-                          <td class="nowrap">${escapeHtml(formatHumanDate(user.created_at))}</td>
-                          <td>
-                            <select name="user_status">
-                              ${selectOptionLabel(user.user_status, 'Не зарегистрирован', 'Не зарегистрирован')}
-                              ${selectOptionLabel(user.user_status, 'Кандидат', 'Кандидат')}
-                              ${selectOptionLabel(user.user_status, 'На проверке', 'На проверке')}
-                              ${selectOptionLabel(user.user_status, 'Одобрен', 'Одобрен')}
-                              ${selectOptionLabel(user.user_status, 'Бан', 'Бан')}
-                            </select>
-                          </td>
-                          <td><input type="datetime-local" name="last_game_at" value="${escapeAttr(toDateTimeLocal(user.last_game_at ?? ''))}" /></td>
-                          <td><input name="warnings_count" value="${escapeAttr(String(user.warnings_count ?? 0))}" /></td>
-                          <td><input name="games_count" value="${escapeAttr(String(user.games_count ?? 0))}" /></td>
-                          <td>
+            <div class="entity-list" id="usersList">
+              ${allUsers
+                .map((user) => {
+                  const modalId = `user-modal-${user.id}`;
+                  const userLabel = user.username ? `@${user.username}` : `id:${user.telegram_id}`;
+                  const filterValue = `${user.id} ${user.telegram_id} ${user.username ?? ''} ${user.first_name ?? ''} ${user.last_name ?? ''} ${user.user_status}`;
+                  return `
+                    <div class="entity-item" data-filter="${escapeAttr(filterValue)}">
+                      <div class="mono">#${user.id}</div>
+                      <div>
+                        <div class="entity-title">${escapeHtml(userLabel)}</div>
+                        <div class="game-item-meta">${escapeHtml([user.first_name ?? '', user.last_name ?? ''].join(' ').trim() || 'Имя не указано')}</div>
+                      </div>
+                      <div>
+                        <div class="game-item-meta">Статус</div>
+                        <div>${escapeHtml(user.user_status)}</div>
+                      </div>
+                      <div>
+                        <div class="game-item-meta">В базе с</div>
+                        <div>${escapeHtml(formatHumanDate(user.created_at))}</div>
+                      </div>
+                      <div>
+                        <button type="button" class="btn-secondary" data-open-modal="${modalId}">Открыть карточку</button>
+                      </div>
+                    </div>
+                    <div class="modal-overlay" id="${modalId}" aria-hidden="true">
+                      <div class="modal-card">
+                        <div class="modal-head">
+                          <h3>Пользователь #${user.id}</h3>
+                        </div>
+                        <form method="post" action="/admin/users/${user.id}" class="game-stack">
+                          <div class="pair-grid">
+                            <div><div class="small">Telegram ID</div><input value="${escapeAttr(String(user.telegram_id))}" disabled /></div>
+                            <div><div class="small">Username</div><input name="username" value="${escapeAttr(user.username ?? '')}" /></div>
+                          </div>
+                          <div class="pair-grid">
+                            <div><div class="small">Имя</div><input name="first_name" value="${escapeAttr(user.first_name ?? '')}" /></div>
+                            <div><div class="small">Фамилия</div><input name="last_name" value="${escapeAttr(user.last_name ?? '')}" /></div>
+                          </div>
+                          <div class="pair-grid">
+                            <div>
+                              <div class="small">Статус</div>
+                              <select name="user_status">
+                                ${selectOptionLabel(user.user_status, 'Не зарегистрирован', 'Не зарегистрирован')}
+                                ${selectOptionLabel(user.user_status, 'Кандидат', 'Кандидат')}
+                                ${selectOptionLabel(user.user_status, 'На проверке', 'На проверке')}
+                                ${selectOptionLabel(user.user_status, 'Одобрен', 'Одобрен')}
+                                ${selectOptionLabel(user.user_status, 'Бан', 'Бан')}
+                              </select>
+                            </div>
+                            <div><div class="small">Последняя игра</div><input type="datetime-local" name="last_game_at" value="${escapeAttr(toDateTimeLocal(user.last_game_at ?? ''))}" /></div>
+                          </div>
+                          <div class="pair-grid">
+                            <div><div class="small">Предупреждения</div><input name="warnings_count" value="${escapeAttr(String(user.warnings_count ?? 0))}" /></div>
+                            <div><div class="small">Сыграно игр</div><input name="games_count" value="${escapeAttr(String(user.games_count ?? 0))}" /></div>
+                          </div>
+                          <div>
+                            <div class="small">Администратор</div>
                             <select name="is_admin">
                               <option value="0"${user.is_admin ? '' : ' selected'}>no</option>
                               <option value="1"${user.is_admin ? ' selected' : ''}>yes</option>
                             </select>
-                          </td>
-                          <td>
-                            <div class="row-actions">
-                              <button type="submit">Сохранить</button>
-                              <button
-                                type="submit"
-                                formaction="/admin/users/${user.id}/delete"
-                                formmethod="post"
-                                class="btn-danger"
-                                onclick="return confirm('Удалить пользователя #${user.id}?');"
-                              >
-                                Удалить
-                              </button>
-                            </div>
-                          </td>
+                          </div>
+                          <div class="modal-actions">
+                            <button type="submit">Сохранить</button>
+                            <button type="submit" formaction="/admin/users/${user.id}/delete" formmethod="post" class="btn-danger" onclick="return confirm('Удалить пользователя #${user.id}?');">Удалить</button>
+                            <button type="button" class="btn-close-strong" data-close-modal="${modalId}">Закрыть</button>
+                          </div>
                         </form>
-                      </tr>
-                    `,
-                  )
-                  .join('')}
-              </tbody>
-            </table>
+                      </div>
+                    </div>
+                  `;
+                })
+                .join('')}
+            </div>
           </div>
 
           <div class="card">
             <div class="section-head">
               <h2>Предупреждения (warnings_log)</h2>
               <button type="button" class="btn-secondary" data-toggle="createWarningForm">+ Добавить предупреждение</button>
+            </div>
+            <div class="section-tools">
+              <input class="filter-input" type="search" placeholder="Поиск по предупреждениям: пользователь, причина, дата..." data-filter-input="warningsList" />
             </div>
             <form method="post" action="/admin/warnings" class="new-entry collapsible-form" id="createWarningForm">
               <h3>Добавить новое предупреждение</h3>
@@ -1014,62 +1115,60 @@ export async function registerAdminRoutes(app: FastifyInstance) {
                 <button type="submit">Добавить</button>
               </div>
             </form>
-            <table>
-              <thead>
-                <tr>
-                  <th>ID</th>
-                  <th>Пользователь</th>
-                  <th>Причина</th>
-                  <th>Дата</th>
-                  <th>Действия</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${allWarnings
-                  .map(
-                    (item) => `
-                      <tr>
-                        <form method="post" action="/admin/warnings">
-                          <td class="mono">${item.id}<input type="hidden" name="warning_id" value="${item.id}" /></td>
-                          <td>
+            <div class="entity-list" id="warningsList">
+              ${allWarnings
+                .map((item) => {
+                  const modalId = `warning-modal-${item.id}`;
+                  const filterValue = `${item.id} ${item.username ?? ''} ${item.telegram_id} ${item.reason} ${formatHumanDate(item.created_at)}`;
+                  return `
+                    <div class="entity-item" data-filter="${escapeAttr(filterValue)}">
+                      <div class="mono">#${item.id}</div>
+                      <div>
+                        <div class="entity-title">${escapeHtml(item.username ? `@${item.username}` : String(item.telegram_id))}</div>
+                        <div class="game-item-meta">${escapeHtml(item.reason.slice(0, 90))}${item.reason.length > 90 ? '…' : ''}</div>
+                      </div>
+                      <div>
+                        <div class="game-item-meta">Дата</div>
+                        <div>${escapeHtml(formatHumanDate(item.created_at))}</div>
+                      </div>
+                      <div></div>
+                      <div><button type="button" class="btn-secondary" data-open-modal="${modalId}">Открыть карточку</button></div>
+                    </div>
+                    <div class="modal-overlay" id="${modalId}" aria-hidden="true">
+                      <div class="modal-card">
+                        <div class="modal-head"><h3>Предупреждение #${item.id}</h3></div>
+                        <form method="post" action="/admin/warnings" class="game-stack">
+                          <input type="hidden" name="warning_id" value="${item.id}" />
+                          <div><div class="small">Пользователь</div>
                             <select name="user_id">
                               ${allUsers
-                                .map(
-                                  (u) =>
-                                    `<option value="${u.id}"${u.id === item.user_id ? ' selected' : ''}>#${u.id} ${escapeHtml(u.username ? `@${u.username}` : String(u.telegram_id))}</option>`,
-                                )
+                                .map((u) => `<option value="${u.id}"${u.id === item.user_id ? ' selected' : ''}>#${u.id} ${escapeHtml(u.username ? `@${u.username}` : String(u.telegram_id))}</option>`)
                                 .join('')}
                             </select>
-                          </td>
-                          <td><input name="reason" value="${escapeAttr(item.reason)}" /></td>
-                          <td><input type="datetime-local" name="created_at" value="${escapeAttr(toDateTimeLocal(item.created_at))}" /></td>
-                          <td>
-                            <div class="row-actions">
-                              <button type="submit">Сохранить</button>
-                              <button
-                                type="submit"
-                                formaction="/admin/warnings/${item.id}/delete"
-                                formmethod="post"
-                                class="btn-danger"
-                                onclick="return confirm('Удалить предупреждение #${item.id}?');"
-                              >
-                                Удалить
-                              </button>
-                            </div>
-                          </td>
+                          </div>
+                          <div><div class="small">Причина</div><textarea name="reason">${escapeHtml(item.reason)}</textarea></div>
+                          <div><div class="small">Дата</div><input type="datetime-local" name="created_at" value="${escapeAttr(toDateTimeLocal(item.created_at))}" /></div>
+                          <div class="modal-actions">
+                            <button type="submit">Сохранить</button>
+                            <button type="submit" formaction="/admin/warnings/${item.id}/delete" formmethod="post" class="btn-danger" onclick="return confirm('Удалить предупреждение #${item.id}?');">Удалить</button>
+                            <button type="button" class="btn-close-strong" data-close-modal="${modalId}">Закрыть</button>
+                          </div>
                         </form>
-                      </tr>
-                    `,
-                  )
-                  .join('')}
-              </tbody>
-            </table>
+                      </div>
+                    </div>
+                  `;
+                })
+                .join('')}
+            </div>
           </div>
 
           <div class="card">
             <div class="section-head">
               <h2>Баны (bans_log)</h2>
               <button type="button" class="btn-secondary" data-toggle="createBanForm">+ Добавить бан</button>
+            </div>
+            <div class="section-tools">
+              <input class="filter-input" type="search" placeholder="Поиск по банам: пользователь, причина, дата..." data-filter-input="bansList" />
             </div>
             <form method="post" action="/admin/bans" class="new-entry collapsible-form" id="createBanForm">
               <h3>Добавить новый бан</h3>
@@ -1102,120 +1201,121 @@ export async function registerAdminRoutes(app: FastifyInstance) {
                 <button type="submit">Добавить</button>
               </div>
             </form>
-            <table>
-              <thead>
-                <tr>
-                  <th>ID</th>
-                  <th>Пользователь</th>
-                  <th>Причина</th>
-                  <th>Дата</th>
-                  <th>Статус</th>
-                  <th>Действия</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${allBans
-                  .map(
-                    (item) => `
-                      <tr>
-                        <form method="post" action="/admin/bans">
-                          <td class="mono">${item.id}<input type="hidden" name="ban_id" value="${item.id}" /></td>
-                          <td>
+            <div class="entity-list" id="bansList">
+              ${allBans
+                .map((item) => {
+                  const modalId = `ban-modal-${item.id}`;
+                  const filterValue = `${item.id} ${item.username ?? ''} ${item.telegram_id} ${item.reason} ${formatHumanDate(item.created_at)}`;
+                  return `
+                    <div class="entity-item" data-filter="${escapeAttr(filterValue)}">
+                      <div class="mono">#${item.id}</div>
+                      <div>
+                        <div class="entity-title">${escapeHtml(item.username ? `@${item.username}` : String(item.telegram_id))}</div>
+                        <div class="game-item-meta">${escapeHtml(item.reason.slice(0, 90))}${item.reason.length > 90 ? '…' : ''}</div>
+                      </div>
+                      <div>
+                        <div class="game-item-meta">Дата</div>
+                        <div>${escapeHtml(formatHumanDate(item.created_at))}</div>
+                      </div>
+                      <div></div>
+                      <div><button type="button" class="btn-secondary" data-open-modal="${modalId}">Открыть карточку</button></div>
+                    </div>
+                    <div class="modal-overlay" id="${modalId}" aria-hidden="true">
+                      <div class="modal-card">
+                        <div class="modal-head"><h3>Бан #${item.id}</h3></div>
+                        <form method="post" action="/admin/bans" class="game-stack">
+                          <input type="hidden" name="ban_id" value="${item.id}" />
+                          <div><div class="small">Пользователь</div>
                             <select name="user_id">
                               ${allUsers
-                                .map(
-                                  (u) =>
-                                    `<option value="${u.id}"${u.id === item.user_id ? ' selected' : ''}>#${u.id} ${escapeHtml(u.username ? `@${u.username}` : String(u.telegram_id))}</option>`,
-                                )
+                                .map((u) => `<option value="${u.id}"${u.id === item.user_id ? ' selected' : ''}>#${u.id} ${escapeHtml(u.username ? `@${u.username}` : String(u.telegram_id))}</option>`)
                                 .join('')}
                             </select>
-                          </td>
-                          <td><input name="reason" value="${escapeAttr(item.reason)}" /></td>
-                          <td><input type="datetime-local" name="created_at" value="${escapeAttr(toDateTimeLocal(item.created_at))}" /></td>
-                          <td>
-                            <select name="set_status_banned">
-                              <option value="1">Ставить Бан</option>
-                              <option value="0" selected>Не менять</option>
-                            </select>
-                          </td>
-                          <td>
-                            <div class="row-actions">
-                              <button type="submit">Сохранить</button>
-                              <button
-                                type="submit"
-                                formaction="/admin/bans/${item.id}/delete"
-                                formmethod="post"
-                                class="btn-danger"
-                                onclick="return confirm('Удалить бан #${item.id}?');"
-                              >
-                                Удалить
-                              </button>
+                          </div>
+                          <div><div class="small">Причина</div><textarea name="reason">${escapeHtml(item.reason)}</textarea></div>
+                          <div class="pair-grid">
+                            <div><div class="small">Дата</div><input type="datetime-local" name="created_at" value="${escapeAttr(toDateTimeLocal(item.created_at))}" /></div>
+                            <div>
+                              <div class="small">Статус пользователя</div>
+                              <select name="set_status_banned">
+                                <option value="1">Ставить Бан</option>
+                                <option value="0" selected>Не менять</option>
+                              </select>
                             </div>
-                          </td>
+                          </div>
+                          <div class="modal-actions">
+                            <button type="submit">Сохранить</button>
+                            <button type="submit" formaction="/admin/bans/${item.id}/delete" formmethod="post" class="btn-danger" onclick="return confirm('Удалить бан #${item.id}?');">Удалить</button>
+                            <button type="button" class="btn-close-strong" data-close-modal="${modalId}">Закрыть</button>
+                          </div>
                         </form>
-                      </tr>
-                    `,
-                  )
-                  .join('')}
-              </tbody>
-            </table>
+                      </div>
+                    </div>
+                  `;
+                })
+                .join('')}
+            </div>
           </div>
 
           <div class="card">
             <h2>Регистрации</h2>
+            <div class="section-tools">
+              <input class="filter-input" type="search" placeholder="Поиск по регистрациям: игра, игрок, статус..." data-filter-input="registrationsList" />
+            </div>
             <div class="status-help">
               <b>Пояснение статусов:</b><br/>
               • <b>Подтвержден</b> — игрок в основном составе игры.<br/>
               • <b>Лист ожидания</b> — мест нет, игрок в очереди.<br/>
               • <b>Отменен</b> — запись снята игроком/админом и не участвует в наборе.
             </div>
-            <table>
-              <thead>
-                <tr>
-                  <th>ID</th>
-                  <th>Игра / Пользователь</th>
-                  <th>Статус</th>
-                  <th>Создано</th>
-                  <th>Действия</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${allRegistrations
-                  .map(
-                    (item) => `
-                      <tr>
-                        <form method="post" action="/admin/registrations/${item.id}">
-                          <td class="mono">${item.id}</td>
-                          <td>#${item.game_id} ${escapeHtml(item.game_title)}<br/>${item.username ? `@${escapeHtml(item.username)}` : escapeHtml(item.first_name ?? String(item.telegram_id))}</td>
-                          <td>
+            <div class="entity-list" id="registrationsList">
+              ${allRegistrations
+                .map((item) => {
+                  const modalId = `registration-modal-${item.id}`;
+                  const filterValue = `${item.id} ${item.game_id} ${item.game_title} ${item.username ?? ''} ${item.first_name ?? ''} ${item.telegram_id} ${getRegistrationStatusLabel(item.status)} ${formatHumanDate(item.created_at)}`;
+                  return `
+                    <div class="entity-item" data-filter="${escapeAttr(filterValue)}">
+                      <div class="mono">#${item.id}</div>
+                      <div>
+                        <div class="entity-title">#${item.game_id} ${escapeHtml(item.game_title)}</div>
+                        <div class="game-item-meta">${item.username ? `@${escapeHtml(item.username)}` : escapeHtml(item.first_name ?? String(item.telegram_id))}</div>
+                      </div>
+                      <div>
+                        <div class="game-item-meta">Статус</div>
+                        <div>${escapeHtml(getRegistrationStatusLabel(item.status))}</div>
+                      </div>
+                      <div>
+                        <div class="game-item-meta">Создано</div>
+                        <div>${escapeHtml(formatHumanDate(item.created_at))}</div>
+                      </div>
+                      <div><button type="button" class="btn-secondary" data-open-modal="${modalId}">Открыть карточку</button></div>
+                    </div>
+                    <div class="modal-overlay" id="${modalId}" aria-hidden="true">
+                      <div class="modal-card">
+                        <div class="modal-head"><h3>Регистрация #${item.id}</h3></div>
+                        <form method="post" action="/admin/registrations/${item.id}" class="game-stack">
+                          <div><div class="small">Игра</div><input value="#${item.game_id} ${escapeAttr(item.game_title)}" disabled /></div>
+                          <div><div class="small">Пользователь</div><input value="${item.username ? `@${escapeAttr(item.username)}` : escapeAttr(item.first_name ?? String(item.telegram_id))}" disabled /></div>
+                          <div>
+                            <div class="small">Статус</div>
                             <select name="status">
                               ${selectOptionLabel(item.status, 'CONFIRMED', 'Подтвержден')}
                               ${selectOptionLabel(item.status, 'WAITLIST', 'Лист ожидания')}
                               ${selectOptionLabel(item.status, 'CANCELLED', 'Отменен')}
                             </select>
-                          </td>
-                          <td>${escapeHtml(formatHumanDate(item.created_at))}</td>
-                          <td>
-                            <div class="row-actions">
-                              <button type="submit">Сохранить</button>
-                              <button
-                                type="submit"
-                                formaction="/admin/registrations/${item.id}/delete"
-                                formmethod="post"
-                                class="btn-danger"
-                                onclick="return confirm('Удалить регистрацию #${item.id}?');"
-                              >
-                                Удалить
-                              </button>
-                            </div>
-                          </td>
+                          </div>
+                          <div class="modal-actions">
+                            <button type="submit">Сохранить</button>
+                            <button type="submit" formaction="/admin/registrations/${item.id}/delete" formmethod="post" class="btn-danger" onclick="return confirm('Удалить регистрацию #${item.id}?');">Удалить</button>
+                            <button type="button" class="btn-close-strong" data-close-modal="${modalId}">Закрыть</button>
+                          </div>
                         </form>
-                      </tr>
-                    `,
-                  )
-                  .join('')}
-              </tbody>
-            </table>
+                      </div>
+                    </div>
+                  `;
+                })
+                .join('')}
+            </div>
           </div>
           <script>
             (function () {
@@ -1258,6 +1358,60 @@ export async function registerAdminRoutes(app: FastifyInstance) {
                       targetId === 'createWarningForm' ? '+ Добавить предупреждение' :
                       '+ Добавить бан';
                   }
+                });
+              });
+
+              document.querySelectorAll('[data-open-modal]').forEach(function (btn) {
+                btn.addEventListener('click', function () {
+                  const modalId = btn.getAttribute('data-open-modal');
+                  if (!modalId) return;
+                  const modal = document.getElementById(modalId);
+                  if (!modal) return;
+                  modal.classList.add('open');
+                  modal.setAttribute('aria-hidden', 'false');
+                });
+              });
+
+              document.querySelectorAll('[data-close-modal]').forEach(function (btn) {
+                btn.addEventListener('click', function () {
+                  const modalId = btn.getAttribute('data-close-modal');
+                  if (!modalId) return;
+                  const modal = document.getElementById(modalId);
+                  if (!modal) return;
+                  modal.classList.remove('open');
+                  modal.setAttribute('aria-hidden', 'true');
+                });
+              });
+
+              document.querySelectorAll('.modal-overlay').forEach(function (overlay) {
+                overlay.addEventListener('click', function (event) {
+                  if (event.target === overlay) {
+                    overlay.classList.remove('open');
+                    overlay.setAttribute('aria-hidden', 'true');
+                  }
+                });
+              });
+
+              document.addEventListener('keydown', function (event) {
+                if (event.key !== 'Escape') return;
+                document.querySelectorAll('.modal-overlay.open').forEach(function (overlay) {
+                  overlay.classList.remove('open');
+                  overlay.setAttribute('aria-hidden', 'true');
+                });
+              });
+
+              document.querySelectorAll('[data-filter-input]').forEach(function (input) {
+                input.addEventListener('input', function () {
+                  const listId = input.getAttribute('data-filter-input');
+                  if (!listId) return;
+                  const list = document.getElementById(listId);
+                  if (!list) return;
+
+                  const query = String(input.value || '').trim().toLowerCase();
+                  list.querySelectorAll('[data-filter]').forEach(function (row) {
+                    const haystack = String(row.getAttribute('data-filter') || '').toLowerCase();
+                    row.style.display = !query || haystack.includes(query) ? '' : 'none';
+                  });
                 });
               });
             })();
@@ -1391,6 +1545,25 @@ function normalizeGameStatus(value?: string) {
   }
 
   return aliases[value] ?? null;
+}
+
+function getGameStatusLabel(value: string) {
+  const labels: Record<string, string> = {
+    OPEN: 'Идет набор',
+    FULL: 'Группа собрана',
+    DONE: 'Игра завершена',
+    CANCELLED: 'Отменена',
+  };
+  return labels[value] ?? value;
+}
+
+function getRegistrationStatusLabel(value: string) {
+  const labels: Record<string, string> = {
+    CONFIRMED: 'Подтвержден',
+    WAITLIST: 'Лист ожидания',
+    CANCELLED: 'Отменен',
+  };
+  return labels[value] ?? value;
 }
 
 function normalizeGameType(value?: string) {
