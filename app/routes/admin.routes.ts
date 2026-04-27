@@ -455,21 +455,21 @@ export async function registerAdminRoutes(app: FastifyInstance) {
           <title>Telegram Bot Admin</title>
           <style>
             :root {
-              --bg: #f6f9ff;
-              --bg-soft: #e8f0ff;
+              --bg: #f7faff;
+              --bg-soft: #dce9ff;
               --surface: #ffffff;
-              --surface-2: #f2f5fb;
-              --text: #0f172a;
-              --muted: #475569;
-              --line: #cbd5e1;
-              --accent: #2463eb;
-              --accent-soft: #e2e8f0;
+              --surface-2: #eef4ff;
+              --text: #0d1b3f;
+              --muted: #3e5a8b;
+              --line: #c9d8ff;
+              --accent: #2159e6;
+              --accent-soft: #dbe7ff;
               --danger: #d0342c;
               --success-bg: #e8f8ee;
               --success-line: #bce7ca;
               --success-text: #13653c;
               --shadow: 0 10px 30px rgba(20, 33, 60, 0.10);
-              --stripe: #eef2f7;
+              --stripe: #f5f8ff;
             }
             body[data-theme="dark"] {
               --bg: #0b1323;
@@ -689,12 +689,12 @@ export async function registerAdminRoutes(app: FastifyInstance) {
               border-top: 1px solid var(--line);
             }
             .btn-close-strong {
-              background: #7c3aed;
+              background: var(--accent);
               color: #fff;
             }
             body[data-theme="dark"] .btn-close-strong {
-              background: #a78bfa;
-              color: #111827;
+              background: #8bb6ff;
+              color: #091224;
             }
             .entity-list { display: grid; gap: 8px; }
             .entity-item {
@@ -719,8 +719,6 @@ export async function registerAdminRoutes(app: FastifyInstance) {
             }
             .new-entry h3 { margin-bottom: 8px; font-size: 14px; }
             .new-entry-grid { display: grid; grid-template-columns: repeat(4, minmax(140px, 1fr)); gap: 8px; }
-            .collapsible-form { display: none; }
-            .collapsible-form.open { display: block; }
             .status-help {
               background: var(--surface-2);
               border: 1px solid var(--line);
@@ -760,77 +758,82 @@ export async function registerAdminRoutes(app: FastifyInstance) {
           <div class="card">
             <div class="section-head">
               <h2>Игры</h2>
-              <button type="button" class="btn-secondary" data-toggle="createGameForm">+ Добавить игру</button>
+              <button type="button" class="btn-secondary" data-open-modal="createGameModal">+ Добавить игру</button>
             </div>
             <div class="hint">Редактирование игр в более компактном виде: слева основные параметры, справа состав и медиа.</div>
             <div class="section-tools">
               <input class="filter-input" type="search" placeholder="Поиск по играм: название, ГМ, тип, статус..." data-filter-input="gamesList" />
             </div>
-            <form method="post" action="/admin/games" class="new-entry collapsible-form" id="createGameForm">
-              <h3>Добавить новую игру</h3>
-              <div class="new-entry-grid">
-                <div>
-                  <div class="small">Название</div>
-                  <input name="title" placeholder="Название игры" />
-                </div>
-                <div>
-                  <div class="small">Тип</div>
-                  <select name="type">
-                    <option value="DND">DND</option>
-                    <option value="MAFIA">MAFIA</option>
-                    <option value="OTHER">OTHER</option>
-                  </select>
-                </div>
-                <div>
-                  <div class="small">Статус</div>
-                  <select name="status">
-                    <option value="OPEN">Идет набор</option>
-                    <option value="FULL">Группа собрана</option>
-                    <option value="DONE">Игра завершена</option>
-                    <option value="CANCELLED">Отменена</option>
-                  </select>
-                </div>
-                <div>
-                  <div class="small">Старт (МСК)</div>
-                  <input type="datetime-local" name="starts_at" value="" />
-                </div>
-                <div>
-                  <div class="small">ГМ</div>
-                  <input name="gm_name" placeholder="@gm_username" />
-                </div>
-                <div>
-                  <div class="small">Лимит мест</div>
-                  <input name="registration_limit" placeholder="например 5" />
-                </div>
-                <div>
-                  <div class="small">Создатель (user_id)</div>
-                  <select name="created_by_user_id">
-                    ${allUsers
-                      .map((u) => `<option value="${u.id}">#${u.id} ${escapeHtml(u.username ? `@${u.username}` : String(u.telegram_id))}</option>`)
-                      .join('')}
-                  </select>
-                </div>
-                <div>
-                  <div class="small">ID изображения (Telegram)</div>
-                  <input name="image_file_id" placeholder="опционально" />
-                </div>
-                <div style="grid-column: span 2;">
-                  <div class="small">Текст мест (как в анонсе)</div>
-                  <input name="participant_slots_text" placeholder="опционально" />
-                </div>
-                <div style="grid-column: span 2;">
-                  <div class="small">Участники (через запятую)</div>
-                  <input name="registered_players_text" placeholder="@user1, @user2" />
-                </div>
-                <div style="grid-column: span 4;">
-                  <div class="small">Описание</div>
-                  <textarea name="description" placeholder="Описание игры"></textarea>
-                </div>
+            <div class="modal-overlay" id="createGameModal" aria-hidden="true">
+              <div class="modal-card">
+                <div class="modal-head"><h3>Добавить новую игру</h3></div>
+                <form method="post" action="/admin/games" class="new-entry">
+                  <div class="new-entry-grid">
+                    <div>
+                      <div class="small">Название</div>
+                      <input name="title" placeholder="Название игры" />
+                    </div>
+                    <div>
+                      <div class="small">Тип</div>
+                      <select name="type">
+                        <option value="DND">DND</option>
+                        <option value="MAFIA">MAFIA</option>
+                        <option value="OTHER">OTHER</option>
+                      </select>
+                    </div>
+                    <div>
+                      <div class="small">Статус</div>
+                      <select name="status">
+                        <option value="OPEN">Идет набор</option>
+                        <option value="FULL">Группа собрана</option>
+                        <option value="DONE">Игра завершена</option>
+                        <option value="CANCELLED">Отменена</option>
+                      </select>
+                    </div>
+                    <div>
+                      <div class="small">Старт (МСК)</div>
+                      <input type="datetime-local" name="starts_at" value="" />
+                    </div>
+                    <div>
+                      <div class="small">ГМ</div>
+                      <input name="gm_name" placeholder="@gm_username" />
+                    </div>
+                    <div>
+                      <div class="small">Лимит мест</div>
+                      <input name="registration_limit" placeholder="например 5" />
+                    </div>
+                    <div>
+                      <div class="small">Создатель (user_id)</div>
+                      <select name="created_by_user_id">
+                        ${allUsers
+                          .map((u) => `<option value="${u.id}">#${u.id} ${escapeHtml(u.username ? `@${u.username}` : String(u.telegram_id))}</option>`)
+                          .join('')}
+                      </select>
+                    </div>
+                    <div>
+                      <div class="small">ID изображения (Telegram)</div>
+                      <input name="image_file_id" placeholder="опционально" />
+                    </div>
+                    <div style="grid-column: span 2;">
+                      <div class="small">Текст мест (как в анонсе)</div>
+                      <input name="participant_slots_text" placeholder="опционально" />
+                    </div>
+                    <div style="grid-column: span 2;">
+                      <div class="small">Участники (через запятую)</div>
+                      <input name="registered_players_text" placeholder="@user1, @user2" />
+                    </div>
+                    <div style="grid-column: span 4;">
+                      <div class="small">Описание</div>
+                      <textarea name="description" placeholder="Описание игры"></textarea>
+                    </div>
+                  </div>
+                  <div class="modal-actions">
+                    <button type="submit">Добавить игру</button>
+                    <button type="button" class="btn-close-strong" data-close-modal="createGameModal">Закрыть</button>
+                  </div>
+                </form>
               </div>
-              <div style="margin-top: 8px;">
-                <button type="submit">Добавить игру</button>
-              </div>
-            </form>
+            </div>
             <div class="games-list" id="gamesList">
               ${allGames
                 .map((game) => {
@@ -948,64 +951,69 @@ export async function registerAdminRoutes(app: FastifyInstance) {
           <div class="card">
             <div class="section-head">
               <h2>Пользователи</h2>
-              <button type="button" class="btn-secondary" data-toggle="createUserForm">+ Добавить пользователя</button>
+              <button type="button" class="btn-secondary" data-open-modal="createUserModal">+ Добавить пользователя</button>
             </div>
             <div class="section-tools">
               <input class="filter-input" type="search" placeholder="Поиск по пользователям: username, имя, статус, ID..." data-filter-input="usersList" />
             </div>
-            <form method="post" action="/admin/users" class="new-entry collapsible-form" id="createUserForm">
-              <h3>Добавить нового пользователя</h3>
-              <div class="new-entry-grid">
-                <div>
-                  <div class="small">Username</div>
-                  <input name="username" placeholder="@username" />
-                </div>
-                <div>
-                  <div class="small">Telegram ID (опц.)</div>
-                  <input name="telegram_id" placeholder="например 502302735" />
-                </div>
-                <div>
-                  <div class="small">Имя</div>
-                  <input name="first_name" placeholder="Имя" />
-                </div>
-                <div>
-                  <div class="small">Фамилия</div>
-                  <input name="last_name" placeholder="Фамилия" />
-                </div>
-                <div>
-                  <div class="small">Статус</div>
-                  <select name="user_status">
-                    <option value="Не зарегистрирован">Не зарегистрирован</option>
-                    <option value="Кандидат" selected>Кандидат</option>
-                    <option value="На проверке">На проверке</option>
-                    <option value="Одобрен">Одобрен</option>
-                    <option value="Бан">Бан</option>
-                  </select>
-                </div>
-                <div>
-                  <div class="small">Последняя игра (опц.)</div>
-                  <input type="datetime-local" name="last_game_at" value="" />
-                </div>
-                <div>
-                  <div class="small">Предупреждения</div>
-                  <input name="warnings_count" value="0" />
-                </div>
-                <div>
-                  <div class="small">Игр</div>
-                  <input name="games_count" value="0" />
-                </div>
-                <div>
-                  <div class="small">Admin</div>
-                  <select name="is_admin">
-                    <option value="0" selected>no</option>
-                    <option value="1">yes</option>
-                  </select>
-                </div>
+            <div class="modal-overlay" id="createUserModal" aria-hidden="true">
+              <div class="modal-card">
+                <div class="modal-head"><h3>Добавить нового пользователя</h3></div>
+                <form method="post" action="/admin/users" class="new-entry">
+                  <div class="new-entry-grid">
+                    <div>
+                      <div class="small">Username</div>
+                      <input name="username" placeholder="@username" />
+                    </div>
+                    <div>
+                      <div class="small">Telegram ID (опц.)</div>
+                      <input name="telegram_id" placeholder="например 502302735" />
+                    </div>
+                    <div>
+                      <div class="small">Имя</div>
+                      <input name="first_name" placeholder="Имя" />
+                    </div>
+                    <div>
+                      <div class="small">Фамилия</div>
+                      <input name="last_name" placeholder="Фамилия" />
+                    </div>
+                    <div>
+                      <div class="small">Статус</div>
+                      <select name="user_status">
+                        <option value="Не зарегистрирован">Не зарегистрирован</option>
+                        <option value="Кандидат" selected>Кандидат</option>
+                        <option value="На проверке">На проверке</option>
+                        <option value="Одобрен">Одобрен</option>
+                        <option value="Бан">Бан</option>
+                      </select>
+                    </div>
+                    <div>
+                      <div class="small">Последняя игра (опц.)</div>
+                      <input type="datetime-local" name="last_game_at" value="" />
+                    </div>
+                    <div>
+                      <div class="small">Предупреждения</div>
+                      <input name="warnings_count" value="0" />
+                    </div>
+                    <div>
+                      <div class="small">Игр</div>
+                      <input name="games_count" value="0" />
+                    </div>
+                    <div>
+                      <div class="small">Admin</div>
+                      <select name="is_admin">
+                        <option value="0" selected>no</option>
+                        <option value="1">yes</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div class="modal-actions">
+                    <button type="submit">Добавить пользователя</button>
+                    <button type="button" class="btn-close-strong" data-close-modal="createUserModal">Закрыть</button>
+                  </div>
+                </form>
               </div>
-              <div style="margin-top: 8px;">
-                <button type="submit">Добавить пользователя</button>
-              </div>
-            </form>
+            </div>
             <div class="entity-list" id="usersList">
               ${allUsers
                 .map((user) => {
@@ -1086,35 +1094,40 @@ export async function registerAdminRoutes(app: FastifyInstance) {
           <div class="card">
             <div class="section-head">
               <h2>Предупреждения (warnings_log)</h2>
-              <button type="button" class="btn-secondary" data-toggle="createWarningForm">+ Добавить предупреждение</button>
+              <button type="button" class="btn-secondary" data-open-modal="createWarningModal">+ Добавить предупреждение</button>
             </div>
             <div class="section-tools">
               <input class="filter-input" type="search" placeholder="Поиск по предупреждениям: пользователь, причина, дата..." data-filter-input="warningsList" />
             </div>
-            <form method="post" action="/admin/warnings" class="new-entry collapsible-form" id="createWarningForm">
-              <h3>Добавить новое предупреждение</h3>
-              <div class="new-entry-grid">
-                <div>
-                  <div class="small">Пользователь</div>
-                  <select name="user_id">
-                    ${allUsers
-                      .map((u) => `<option value="${u.id}">#${u.id} ${escapeHtml(u.username ? `@${u.username}` : String(u.telegram_id))}</option>`)
-                      .join('')}
-                  </select>
-                </div>
-                <div>
-                  <div class="small">Дата</div>
-                  <input type="datetime-local" name="created_at" value="" />
-                </div>
-                <div style="grid-column: span 2;">
-                  <div class="small">Причина</div>
-                  <input name="reason" placeholder="Причина предупреждения" />
-                </div>
+            <div class="modal-overlay" id="createWarningModal" aria-hidden="true">
+              <div class="modal-card">
+                <div class="modal-head"><h3>Добавить новое предупреждение</h3></div>
+                <form method="post" action="/admin/warnings" class="new-entry">
+                  <div class="new-entry-grid">
+                    <div>
+                      <div class="small">Пользователь</div>
+                      <select name="user_id">
+                        ${allUsers
+                          .map((u) => `<option value="${u.id}">#${u.id} ${escapeHtml(u.username ? `@${u.username}` : String(u.telegram_id))}</option>`)
+                          .join('')}
+                      </select>
+                    </div>
+                    <div>
+                      <div class="small">Дата</div>
+                      <input type="datetime-local" name="created_at" value="" />
+                    </div>
+                    <div style="grid-column: span 2;">
+                      <div class="small">Причина</div>
+                      <input name="reason" placeholder="Причина предупреждения" />
+                    </div>
+                  </div>
+                  <div class="modal-actions">
+                    <button type="submit">Добавить</button>
+                    <button type="button" class="btn-close-strong" data-close-modal="createWarningModal">Закрыть</button>
+                  </div>
+                </form>
               </div>
-              <div style="margin-top: 8px;">
-                <button type="submit">Добавить</button>
-              </div>
-            </form>
+            </div>
             <div class="entity-list" id="warningsList">
               ${allWarnings
                 .map((item) => {
@@ -1165,42 +1178,47 @@ export async function registerAdminRoutes(app: FastifyInstance) {
           <div class="card">
             <div class="section-head">
               <h2>Баны (bans_log)</h2>
-              <button type="button" class="btn-secondary" data-toggle="createBanForm">+ Добавить бан</button>
+              <button type="button" class="btn-secondary" data-open-modal="createBanModal">+ Добавить бан</button>
             </div>
             <div class="section-tools">
               <input class="filter-input" type="search" placeholder="Поиск по банам: пользователь, причина, дата..." data-filter-input="bansList" />
             </div>
-            <form method="post" action="/admin/bans" class="new-entry collapsible-form" id="createBanForm">
-              <h3>Добавить новый бан</h3>
-              <div class="new-entry-grid">
-                <div>
-                  <div class="small">Пользователь</div>
-                  <select name="user_id">
-                    ${allUsers
-                      .map((u) => `<option value="${u.id}">#${u.id} ${escapeHtml(u.username ? `@${u.username}` : String(u.telegram_id))}</option>`)
-                      .join('')}
-                  </select>
-                </div>
-                <div>
-                  <div class="small">Дата</div>
-                  <input type="datetime-local" name="created_at" value="" />
-                </div>
-                <div>
-                  <div class="small">Статус пользователя</div>
-                  <select name="set_status_banned">
-                    <option value="1" selected>Ставить Бан</option>
-                    <option value="0">Не менять</option>
-                  </select>
-                </div>
-                <div style="grid-column: span 1;">
-                  <div class="small">Причина</div>
-                  <input name="reason" placeholder="Причина бана" />
-                </div>
+            <div class="modal-overlay" id="createBanModal" aria-hidden="true">
+              <div class="modal-card">
+                <div class="modal-head"><h3>Добавить новый бан</h3></div>
+                <form method="post" action="/admin/bans" class="new-entry">
+                  <div class="new-entry-grid">
+                    <div>
+                      <div class="small">Пользователь</div>
+                      <select name="user_id">
+                        ${allUsers
+                          .map((u) => `<option value="${u.id}">#${u.id} ${escapeHtml(u.username ? `@${u.username}` : String(u.telegram_id))}</option>`)
+                          .join('')}
+                      </select>
+                    </div>
+                    <div>
+                      <div class="small">Дата</div>
+                      <input type="datetime-local" name="created_at" value="" />
+                    </div>
+                    <div>
+                      <div class="small">Статус пользователя</div>
+                      <select name="set_status_banned">
+                        <option value="1" selected>Ставить Бан</option>
+                        <option value="0">Не менять</option>
+                      </select>
+                    </div>
+                    <div style="grid-column: span 1;">
+                      <div class="small">Причина</div>
+                      <input name="reason" placeholder="Причина бана" />
+                    </div>
+                  </div>
+                  <div class="modal-actions">
+                    <button type="submit">Добавить</button>
+                    <button type="button" class="btn-close-strong" data-close-modal="createBanModal">Закрыть</button>
+                  </div>
+                </form>
               </div>
-              <div style="margin-top: 8px;">
-                <button type="submit">Добавить</button>
-              </div>
-            </form>
+            </div>
             <div class="entity-list" id="bansList">
               ${allBans
                 .map((item) => {
@@ -1340,27 +1358,6 @@ export async function registerAdminRoutes(app: FastifyInstance) {
                 });
               }
 
-              document.querySelectorAll('[data-toggle]').forEach(function (toggleBtn) {
-                toggleBtn.addEventListener('click', function () {
-                  const targetId = toggleBtn.getAttribute('data-toggle');
-                  if (!targetId) return;
-                  const form = document.getElementById(targetId);
-                  if (!form) return;
-                  const isOpen = form.classList.toggle('open');
-                  if (isOpen) {
-                    const firstInput = form.querySelector('input, select, textarea');
-                    if (firstInput) firstInput.focus();
-                    toggleBtn.textContent = '− Скрыть форму';
-                  } else {
-                    toggleBtn.textContent =
-                      targetId === 'createGameForm' ? '+ Добавить игру' :
-                      targetId === 'createUserForm' ? '+ Добавить пользователя' :
-                      targetId === 'createWarningForm' ? '+ Добавить предупреждение' :
-                      '+ Добавить бан';
-                  }
-                });
-              });
-
               document.querySelectorAll('[data-open-modal]').forEach(function (btn) {
                 btn.addEventListener('click', function () {
                   const modalId = btn.getAttribute('data-open-modal');
@@ -1369,6 +1366,12 @@ export async function registerAdminRoutes(app: FastifyInstance) {
                   if (!modal) return;
                   modal.classList.add('open');
                   modal.setAttribute('aria-hidden', 'false');
+                  const firstInput = modal.querySelector('input:not([disabled]), select:not([disabled]), textarea:not([disabled])');
+                  if (firstInput) {
+                    setTimeout(function () {
+                      firstInput.focus();
+                    }, 0);
+                  }
                 });
               });
 
