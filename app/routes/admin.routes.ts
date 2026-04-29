@@ -36,13 +36,13 @@ export async function registerAdminRoutes(app: FastifyInstance) {
     const body = request.body as FormBody;
     const startsAt = parseDateTimeLocal(body.starts_at);
     if (!startsAt) {
-      reply.redirect('/admin?saved=invalid_game_datetime');
+      redirectAdmin(reply, 'invalid_game_datetime');
       return;
     }
 
     const createdByUserId = parseNullableInt(body.created_by_user_id);
     if (!createdByUserId || !users.findById(createdByUserId)) {
-      reply.redirect('/admin?saved=invalid_game_creator');
+      redirectAdmin(reply, 'invalid_game_creator');
       return;
     }
 
@@ -69,7 +69,7 @@ export async function registerAdminRoutes(app: FastifyInstance) {
       return;
     }
 
-    reply.redirect('/admin?saved=game_created');
+    redirectAdmin(reply, 'game_created');
   });
 
   app.post('/admin/games/:id/delete', async (request, reply) => {
@@ -95,10 +95,10 @@ export async function registerAdminRoutes(app: FastifyInstance) {
       }
 
       games.deleteGame(gameId);
-      reply.redirect('/admin?saved=game_deleted');
+      redirectAdmin(reply, 'game_deleted');
     } catch (error) {
       console.error(`Failed to delete game #${gameId}:`, error);
-      reply.redirect('/admin?saved=game_delete_failed');
+      redirectAdmin(reply, 'game_delete_failed');
     }
   });
 
@@ -140,7 +140,7 @@ export async function registerAdminRoutes(app: FastifyInstance) {
     });
     await syncAnnouncement(gameId);
 
-    reply.redirect('/admin?saved=game');
+    redirectAdmin(reply, 'game_updated', game.title);
   });
 
   app.post('/admin/users/:id', async (request, reply) => {
@@ -172,7 +172,8 @@ export async function registerAdminRoutes(app: FastifyInstance) {
       return;
     }
 
-    reply.redirect('/admin?saved=user');
+    const updatedUser = users.findById(userId);
+    redirectAdmin(reply, 'user_updated', formatUserLabel(updatedUser?.username ?? null, updatedUser?.telegram_id ?? userId));
   });
 
   app.post('/admin/users', async (request, reply) => {
@@ -183,7 +184,7 @@ export async function registerAdminRoutes(app: FastifyInstance) {
     const body = request.body as FormBody;
     const usernameRaw = (body.username ?? '').trim();
     if (!usernameRaw) {
-      reply.redirect('/admin?saved=username_required');
+      redirectAdmin(reply, 'username_required');
       return;
     }
 
@@ -214,7 +215,7 @@ export async function registerAdminRoutes(app: FastifyInstance) {
           });
 
     if (!user) {
-      reply.redirect('/admin?saved=user_create_failed');
+      redirectAdmin(reply, 'user_create_failed');
       return;
     }
 
@@ -232,11 +233,11 @@ export async function registerAdminRoutes(app: FastifyInstance) {
 
     user = users.findById(user.id);
     if (!user) {
-      reply.redirect('/admin?saved=user_create_failed');
+      redirectAdmin(reply, 'user_create_failed');
       return;
     }
 
-    reply.redirect('/admin?saved=user_created');
+    redirectAdmin(reply, 'user_created', formatUserLabel(user.username ?? null, user.telegram_id));
   });
 
   app.post('/admin/users/:id/delete', async (request, reply) => {
@@ -256,14 +257,14 @@ export async function registerAdminRoutes(app: FastifyInstance) {
         const reason = result.reason === 'HAS_CREATED_GAMES'
           ? 'Нельзя удалить: пользователь является создателем игр.'
           : 'Не удалось удалить пользователя.';
-        reply.redirect(`/admin?saved=${encodeURIComponent(reason)}`);
+        redirectAdmin(reply, 'user_delete_failed', reason);
         return;
       }
 
-      reply.redirect('/admin?saved=user_deleted');
+      redirectAdmin(reply, 'user_deleted');
     } catch (error) {
       console.error(`Failed to delete user #${userId}:`, error);
-      reply.redirect('/admin?saved=user_delete_failed');
+      redirectAdmin(reply, 'user_delete_failed');
     }
   });
 
@@ -293,12 +294,12 @@ export async function registerAdminRoutes(app: FastifyInstance) {
         reply.code(404).send('Warning log not found');
         return;
       }
-      reply.redirect('/admin?saved=warning_updated');
+      redirectAdmin(reply, 'warning_updated');
       return;
     }
 
     users.createWarningLog({ userId, reason, createdAt });
-    reply.redirect('/admin?saved=warning_created');
+    redirectAdmin(reply, 'warning_created');
   });
 
   app.post('/admin/warnings/:id/delete', async (request, reply) => {
@@ -318,7 +319,7 @@ export async function registerAdminRoutes(app: FastifyInstance) {
       return;
     }
 
-    reply.redirect('/admin?saved=warning_deleted');
+    redirectAdmin(reply, 'warning_deleted');
   });
 
   app.post('/admin/bans', async (request, reply) => {
@@ -352,12 +353,12 @@ export async function registerAdminRoutes(app: FastifyInstance) {
         reply.code(404).send('Ban log not found');
         return;
       }
-      reply.redirect('/admin?saved=ban_updated');
+      redirectAdmin(reply, 'ban_updated');
       return;
     }
 
     users.createBanLog({ userId, reason, createdAt });
-    reply.redirect('/admin?saved=ban_created');
+    redirectAdmin(reply, 'ban_created');
   });
 
   app.post('/admin/bans/:id/delete', async (request, reply) => {
@@ -377,7 +378,7 @@ export async function registerAdminRoutes(app: FastifyInstance) {
       return;
     }
 
-    reply.redirect('/admin?saved=ban_deleted');
+    redirectAdmin(reply, 'ban_deleted');
   });
 
   app.post('/admin/registrations/:id', async (request, reply) => {
@@ -408,7 +409,7 @@ export async function registerAdminRoutes(app: FastifyInstance) {
     games.syncRegisteredPlayersText(registration.game_id);
     games.refreshStatus(registration.game_id);
 
-    reply.redirect('/admin?saved=registration');
+    redirectAdmin(reply, 'registration_updated');
   });
 
   app.post('/admin/registrations/:id/delete', async (request, reply) => {
@@ -433,7 +434,7 @@ export async function registerAdminRoutes(app: FastifyInstance) {
     games.refreshStatus(registration.game_id);
     await syncAnnouncement(registration.game_id);
 
-    reply.redirect('/admin?saved=registration_deleted');
+    redirectAdmin(reply, 'registration_deleted');
   });
 
   app.post('/admin/bot-control/:action', async (request, reply) => {
@@ -444,16 +445,48 @@ export async function registerAdminRoutes(app: FastifyInstance) {
     const action = String((request.params as { action: string }).action || '').toLowerCase();
     const allowed = new Set(['start', 'stop', 'restart', 'update']);
     if (!allowed.has(action)) {
-      reply.redirect('/admin?saved=bot_control_invalid_action');
+      redirectAdmin(reply, 'bot_control_invalid_action');
+      return;
+    }
+
+    const currentStatus = await botControl.getStatus();
+    if (action === 'start' && currentStatus.state === 'running') {
+      if (request.headers.accept?.includes('application/json')) {
+        reply.send({ ok: true, saved: 'bot_already_running' });
+        return;
+      }
+      redirectAdmin(reply, 'bot_already_running');
+      return;
+    }
+    if (action === 'stop' && currentStatus.state === 'stopped') {
+      if (request.headers.accept?.includes('application/json')) {
+        reply.send({ ok: true, saved: 'bot_already_stopped' });
+        return;
+      }
+      redirectAdmin(reply, 'bot_already_stopped');
       return;
     }
 
     const result = await botControl.runAction(action as 'start' | 'stop' | 'restart' | 'update');
-    reply.redirect(
-      `/admin?saved=${encodeURIComponent(
-        result.ok ? `bot_${action}_ok` : `bot_${action}_failed`,
-      )}`,
-    );
+    const savedCode = result.ok ? `bot_${action}_ok` : `bot_${action}_failed`;
+
+    if (request.headers.accept?.includes('application/json')) {
+      reply.send({
+        ok: result.ok,
+        saved: savedCode,
+        notice: formatAdminNotice(savedCode),
+      });
+      return;
+    }
+    redirectAdmin(reply, savedCode);
+  });
+
+  app.get('/admin/bot-control/status', async (request, reply) => {
+    if (!ensureAdminPanelAuth(request, reply)) {
+      return;
+    }
+    const status = await botControl.getStatus();
+    reply.send(status);
   });
 
   app.get('/admin', async (request, reply) => {
@@ -461,13 +494,14 @@ export async function registerAdminRoutes(app: FastifyInstance) {
       return;
     }
 
-    const query = request.query as { saved?: string };
+    const query = request.query as { saved?: string; entity?: string };
     const allUsers = users.listAll();
     const allGames = games.listAllDetailed();
     const allRegistrations = registrations.listAllDetailed();
     const allWarnings = users.listWarningsDetailed();
     const allBans = users.listBansDetailed();
     const botStatus = await botControl.getStatus();
+    const notice = formatAdminNotice(query.saved, query.entity);
 
     const html = `
       <!doctype html>
@@ -613,6 +647,27 @@ export async function registerAdminRoutes(app: FastifyInstance) {
             body[data-theme="dark"] .status-unavailable { background: #1b2d4d; color: #c5dbff; border-color: #314f80; }
             body[data-theme="dark"] .status-error { background: #4a1f28; color: #ffc9d2; border-color: #6f2a38; }
             .control-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+            .toast-wrap {
+              position: fixed;
+              right: 16px;
+              bottom: 16px;
+              z-index: 300;
+              display: grid;
+              gap: 8px;
+              width: min(380px, calc(100vw - 24px));
+            }
+            .toast {
+              border: 1px solid var(--line);
+              border-left: 4px solid var(--accent);
+              background: var(--surface);
+              color: var(--text);
+              border-radius: 10px;
+              padding: 10px 12px;
+              box-shadow: var(--shadow);
+              animation: modalIn .2s ease;
+            }
+            .toast.ok { border-left-color: #1f9d63; }
+            .toast.err { border-left-color: var(--danger); }
             table {
               width: 100%;
               border-collapse: separate;
@@ -807,7 +862,7 @@ export async function registerAdminRoutes(app: FastifyInstance) {
             </div>
             <button type="button" id="themeToggle" class="theme-toggle">🌙 Тема</button>
           </div>
-          ${query.saved ? `<div class="ok">Изменения сохранены: ${escapeHtml(query.saved)}</div>` : ''}
+          <div id="toastWrap" class="toast-wrap"></div>
 
           <div class="card">
             <div class="section-head">
@@ -825,15 +880,17 @@ export async function registerAdminRoutes(app: FastifyInstance) {
                         : botStatus.state === 'error'
                           ? 'status-error'
                           : 'status-unavailable'
-                  }">${escapeHtml(botStatus.label)}</span>
+                  }" id="botStatusPill">${escapeHtml(botStatus.label)}</span>
                 </div>
-                <div class="small">${escapeHtml(botStatus.details || '—')}</div>
+                ${botStatus.details && botStatus.details.toLowerCase() !== 'active'
+                  ? `<div class="small" id="botStatusDetails">${escapeHtml(botStatus.details)}</div>`
+                  : '<div class="small" id="botStatusDetails"></div>'}
               </div>
               <div class="control-actions">
-                <form method="post" action="/admin/bot-control/start"><button type="submit">Включить</button></form>
-                <form method="post" action="/admin/bot-control/stop"><button type="submit" class="btn-danger">Выключить</button></form>
-                <form method="post" action="/admin/bot-control/restart"><button type="submit" class="btn-secondary">Перезапуск</button></form>
-                <form method="post" action="/admin/bot-control/update"><button type="submit" class="btn-secondary">Обновить</button></form>
+                <form method="post" action="/admin/bot-control/start" class="js-bot-control"><button type="submit">Включить</button></form>
+                <form method="post" action="/admin/bot-control/stop" class="js-bot-control"><button type="submit" class="btn-danger" onclick="return confirm('Вы уверены? После выключения панель может стать недоступной до ручного запуска сервиса.');">Выключить</button></form>
+                <form method="post" action="/admin/bot-control/restart" class="js-bot-control"><button type="submit" class="btn-secondary">Перезапуск</button></form>
+                <form method="post" action="/admin/bot-control/update" class="js-bot-control"><button type="submit" class="btn-secondary">Обновить</button></form>
               </div>
             </div>
           </div>
@@ -1420,9 +1477,55 @@ export async function registerAdminRoutes(app: FastifyInstance) {
           </div>
           <script>
             (function () {
+              const initialNotice = ${JSON.stringify(notice || '')};
               const key = 'tg_admin_theme';
               const root = document.body;
               const btn = document.getElementById('themeToggle');
+              const toastWrap = document.getElementById('toastWrap');
+              const statusPill = document.getElementById('botStatusPill');
+              const statusDetails = document.getElementById('botStatusDetails');
+              const statusClassMap = {
+                running: 'status-running',
+                stopped: 'status-stopped',
+                unavailable: 'status-unavailable',
+                error: 'status-error',
+              };
+              const showToast = function (text, type) {
+                if (!toastWrap || !text) return;
+                const el = document.createElement('div');
+                el.className = 'toast ' + (type || 'ok');
+                el.textContent = String(text);
+                toastWrap.appendChild(el);
+                setTimeout(function () {
+                  el.remove();
+                }, 4200);
+              };
+              const refreshBotStatus = async function () {
+                if (!statusPill) return;
+                try {
+                  const response = await fetch('/admin/bot-control/status', {
+                    headers: { accept: 'application/json' },
+                  });
+                  if (!response.ok) return;
+                  const payload = await response.json();
+                  statusPill.textContent = payload.label || '—';
+                  statusPill.classList.remove('status-running', 'status-stopped', 'status-unavailable', 'status-error');
+                  const cls = statusClassMap[payload.state] || 'status-unavailable';
+                  statusPill.classList.add(cls);
+                  if (statusDetails) {
+                    const details = (payload.details || '').trim();
+                    statusDetails.textContent = details && details.toLowerCase() !== 'active' ? details : '';
+                  }
+                } catch (_error) {}
+              };
+
+              if (initialNotice) {
+                showToast(initialNotice, 'ok');
+                if (window.history && window.history.replaceState) {
+                  window.history.replaceState({}, '', '/admin');
+                }
+              }
+
               const setTheme = function (theme) {
                 root.setAttribute('data-theme', theme);
                 if (btn) {
@@ -1432,6 +1535,15 @@ export async function registerAdminRoutes(app: FastifyInstance) {
               const saved = localStorage.getItem(key);
               const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
               setTheme(saved || (prefersDark ? 'dark' : 'light'));
+              const scrollKey = 'tg_admin_scroll_y';
+              const savedScroll = sessionStorage.getItem(scrollKey);
+              if (savedScroll) {
+                const y = Number.parseInt(savedScroll, 10);
+                if (!Number.isNaN(y)) {
+                  window.scrollTo(0, y);
+                }
+                sessionStorage.removeItem(scrollKey);
+              }
               if (btn) {
                 btn.addEventListener('click', function () {
                   const current = root.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
@@ -1498,6 +1610,49 @@ export async function registerAdminRoutes(app: FastifyInstance) {
                     const haystack = String(row.getAttribute('data-filter') || '').toLowerCase();
                     row.style.display = !query || haystack.includes(query) ? '' : 'none';
                   });
+                });
+              });
+
+              document.querySelectorAll('form').forEach(function (form) {
+                form.addEventListener('submit', function () {
+                  sessionStorage.setItem(scrollKey, String(window.scrollY || 0));
+                });
+              });
+
+              document.querySelectorAll('.js-bot-control').forEach(function (form) {
+                form.addEventListener('submit', async function (event) {
+                  event.preventDefault();
+                  const actionUrl = form.getAttribute('action');
+                  if (!actionUrl) return;
+                  const isUpdate = actionUrl.endsWith('/update');
+                  const submitButton = form.querySelector('button[type="submit"]');
+                  const originalText = submitButton ? submitButton.textContent : '';
+                  if (submitButton) {
+                    submitButton.disabled = true;
+                    submitButton.textContent = 'Выполняется...';
+                  }
+                  if (isUpdate) {
+                    showToast('Начинается обновление бота. Это может занять до 1-2 минут.', 'ok');
+                  }
+                  try {
+                    const response = await fetch(actionUrl, {
+                      method: 'POST',
+                      headers: { accept: 'application/json' },
+                    });
+                    const payload = await response.json();
+                    const ok = !!(payload && payload.ok);
+                    const message = payload && payload.notice ? String(payload.notice) : (ok ? 'Готово.' : 'Не удалось выполнить команду.');
+                    showToast(message, ok ? 'ok' : 'err');
+                    await refreshBotStatus();
+                  } catch (error) {
+                    showToast('Не удалось выполнить команду управления ботом.', 'err');
+                    await refreshBotStatus();
+                  } finally {
+                    if (submitButton) {
+                      submitButton.disabled = false;
+                      submitButton.textContent = originalText || 'Готово';
+                    }
+                  }
                 });
               });
             })();
@@ -1685,6 +1840,66 @@ function selectOption(current: string, option: string) {
 
 function selectOptionLabel(current: string, value: string, label: string) {
   return `<option value="${value}"${current === value ? ' selected' : ''}>${label}</option>`;
+}
+
+function formatUserLabel(username: string | null, telegramId: number) {
+  return username ? `@${username}` : `ID ${telegramId}`;
+}
+
+function redirectAdmin(reply: FastifyReply, saved: string, entity?: string) {
+  const params = new URLSearchParams();
+  params.set('saved', saved);
+  if (entity) {
+    params.set('entity', entity);
+  }
+  reply.redirect(`/admin?${params.toString()}`);
+}
+
+function formatAdminNotice(saved?: string, entity?: string) {
+  if (!saved) {
+    return '';
+  }
+
+  const map: Record<string, string> = {
+    game_created: 'Игра успешно добавлена.',
+    game_updated: `Игра "${entity ?? 'без названия'}" сохранена.`,
+    game_deleted: 'Игра удалена.',
+    game_delete_failed: 'Не удалось удалить игру.',
+    user_updated: `Пользователь ${entity ?? ''} сохранен.`,
+    user_created: `Пользователь ${entity ?? ''} добавлен.`,
+    user_deleted: 'Пользователь удален.',
+    user_delete_failed: entity || 'Не удалось удалить пользователя.',
+    username_required: 'Нужно указать username для создания пользователя.',
+    user_create_failed: 'Не удалось создать пользователя.',
+    warning_created: 'Предупреждение добавлено.',
+    warning_updated: 'Предупреждение сохранено.',
+    warning_deleted: 'Предупреждение удалено.',
+    ban_created: 'Бан добавлен.',
+    ban_updated: 'Бан сохранен.',
+    ban_deleted: 'Бан удален.',
+    registration_updated: 'Статус регистрации обновлен.',
+    registration_deleted: 'Регистрация удалена.',
+    invalid_game_datetime: 'Некорректная дата игры.',
+    invalid_game_creator: 'Некорректный создатель игры.',
+    bot_control_invalid_action: 'Неизвестное действие управления ботом.',
+    bot_start_ok: 'Запуск бота выполнен.',
+    bot_stop_ok: 'Остановка бота выполнена.',
+    bot_restart_ok: 'Перезапуск бота выполнен.',
+    bot_update_ok: 'Обновление запущено. Проверь статус через несколько секунд.',
+    bot_start_failed: 'Не удалось запустить бота.',
+    bot_stop_failed: 'Не удалось остановить бота.',
+    bot_restart_failed: 'Не удалось перезапустить бота.',
+    bot_update_failed: 'Не удалось запустить обновление.',
+    bot_action_failed: 'Команда управления ботом завершилась с ошибкой.',
+    bot_already_running: 'Бот уже запущен.',
+    bot_already_stopped: 'Бот уже выключен.',
+  };
+
+  if (saved.startsWith('game_create_failed_')) {
+    return `Не удалось создать игру: ${saved.replace('game_create_failed_', '')}.`;
+  }
+
+  return map[saved] ?? saved;
 }
 
 function escapeHtml(value: string) {
