@@ -34,6 +34,13 @@ const envSchema = z.object({
   BACKUP_RETENTION_DAYS: z.coerce.number().int().positive().default(7),
   ADMIN_USERNAME: z.string().min(1).default('admin'),
   ADMIN_PASSWORD: z.string().min(1),
+  BOT_CONTROL_MODE: z.string().default(''),
+  BOT_CONTROL_SERVICE_NAME: z.string().default('telegram-bot'),
+  BOT_CONTROL_CMD_STATUS: z.string().default(''),
+  BOT_CONTROL_CMD_START: z.string().default(''),
+  BOT_CONTROL_CMD_STOP: z.string().default(''),
+  BOT_CONTROL_CMD_RESTART: z.string().default(''),
+  BOT_CONTROL_CMD_UPDATE: z.string().default(''),
 });
 
 const parsed = envSchema.parse(process.env);

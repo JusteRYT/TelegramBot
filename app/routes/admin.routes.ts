@@ -6,12 +6,14 @@ import { RegistrationRepository } from '../repositories/registration.repository'
 import { UserRepository } from '../repositories/user.repository';
 import { AnnouncementService } from '../services/announcement.service';
 import { AuthService } from '../services/auth.service';
+import { BotControlService } from '../services/bot-control.service';
 import { GameService } from '../services/game.service';
 
 const auth = new AuthService();
 const users = new UserRepository();
 const games = new GameService();
 const registrations = new RegistrationRepository();
+const botControl = new BotControlService();
 
 type FormBody = Record<string, string | undefined>;
 
@@ -434,6 +436,26 @@ export async function registerAdminRoutes(app: FastifyInstance) {
     reply.redirect('/admin?saved=registration_deleted');
   });
 
+  app.post('/admin/bot-control/:action', async (request, reply) => {
+    if (!ensureAdminPanelAuth(request, reply)) {
+      return;
+    }
+
+    const action = String((request.params as { action: string }).action || '').toLowerCase();
+    const allowed = new Set(['start', 'stop', 'restart', 'update']);
+    if (!allowed.has(action)) {
+      reply.redirect('/admin?saved=bot_control_invalid_action');
+      return;
+    }
+
+    const result = await botControl.runAction(action as 'start' | 'stop' | 'restart' | 'update');
+    reply.redirect(
+      `/admin?saved=${encodeURIComponent(
+        result.ok ? `bot_${action}_ok` : `bot_${action}_failed`,
+      )}`,
+    );
+  });
+
   app.get('/admin', async (request, reply) => {
     if (!ensureAdminPanelAuth(request, reply)) {
       return;
@@ -445,6 +467,7 @@ export async function registerAdminRoutes(app: FastifyInstance) {
     const allRegistrations = registrations.listAllDetailed();
     const allWarnings = users.listWarningsDetailed();
     const allBans = users.listBansDetailed();
+    const botStatus = await botControl.getStatus();
 
     const html = `
       <!doctype html>
@@ -559,6 +582,37 @@ export async function registerAdminRoutes(app: FastifyInstance) {
               border-radius: 10px;
               margin-bottom: 12px;
             }
+            .control-panel {
+              display: flex;
+              align-items: center;
+              justify-content: space-between;
+              gap: 12px;
+              flex-wrap: wrap;
+            }
+            .control-status {
+              display: flex;
+              align-items: center;
+              gap: 8px;
+              font-weight: 600;
+            }
+            .status-pill {
+              display: inline-flex;
+              align-items: center;
+              gap: 6px;
+              border-radius: 999px;
+              padding: 4px 10px;
+              font-size: 12px;
+              border: 1px solid var(--line);
+            }
+            .status-running { background: #e7f8ef; color: #127047; border-color: #b4e7cb; }
+            .status-stopped { background: #fff4e6; color: #9a5800; border-color: #ffd9a8; }
+            .status-unavailable { background: #eef3ff; color: #24498c; border-color: #c9d8ff; }
+            .status-error { background: #ffeded; color: #a11717; border-color: #ffc2c2; }
+            body[data-theme="dark"] .status-running { background: #173a2b; color: #b9f5d8; border-color: #265a42; }
+            body[data-theme="dark"] .status-stopped { background: #43321d; color: #ffd9a6; border-color: #5b4324; }
+            body[data-theme="dark"] .status-unavailable { background: #1b2d4d; color: #c5dbff; border-color: #314f80; }
+            body[data-theme="dark"] .status-error { background: #4a1f28; color: #ffc9d2; border-color: #6f2a38; }
+            .control-actions { display: flex; gap: 8px; flex-wrap: wrap; }
             table {
               width: 100%;
               border-collapse: separate;
@@ -754,6 +808,35 @@ export async function registerAdminRoutes(app: FastifyInstance) {
             <button type="button" id="themeToggle" class="theme-toggle">🌙 Тема</button>
           </div>
           ${query.saved ? `<div class="ok">Изменения сохранены: ${escapeHtml(query.saved)}</div>` : ''}
+
+          <div class="card">
+            <div class="section-head">
+              <h2>Управление ботом</h2>
+            </div>
+            <div class="control-panel">
+              <div>
+                <div class="control-status">
+                  <span>Статус:</span>
+                  <span class="status-pill ${
+                    botStatus.state === 'running'
+                      ? 'status-running'
+                      : botStatus.state === 'stopped'
+                        ? 'status-stopped'
+                        : botStatus.state === 'error'
+                          ? 'status-error'
+                          : 'status-unavailable'
+                  }">${escapeHtml(botStatus.label)}</span>
+                </div>
+                <div class="small">${escapeHtml(botStatus.details || '—')}</div>
+              </div>
+              <div class="control-actions">
+                <form method="post" action="/admin/bot-control/start"><button type="submit">Включить</button></form>
+                <form method="post" action="/admin/bot-control/stop"><button type="submit" class="btn-danger">Выключить</button></form>
+                <form method="post" action="/admin/bot-control/restart"><button type="submit" class="btn-secondary">Перезапуск</button></form>
+                <form method="post" action="/admin/bot-control/update"><button type="submit" class="btn-secondary">Обновить</button></form>
+              </div>
+            </div>
+          </div>
 
           <div class="card">
             <div class="section-head">
