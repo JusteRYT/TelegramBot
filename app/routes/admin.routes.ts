@@ -1699,14 +1699,15 @@ export async function registerAdminRoutes(app: FastifyInstance) {
 
                   const action = submitter.getAttribute('formaction') || form.getAttribute('action') || window.location.pathname;
                   const method = (submitter.getAttribute('formmethod') || form.getAttribute('method') || 'post').toUpperCase();
-                  const formData = new FormData(form);
-                  if (submitter.name && submitter.value) {
-                    formData.append(submitter.name, submitter.value);
-                  }
                   const body = new URLSearchParams();
-                  formData.forEach(function (value, key) {
-                    body.append(key, String(value));
+                  form.querySelectorAll('input, select, textarea').forEach(function (field) {
+                    if (!field.name || field.disabled) return;
+                    if ((field.type === 'checkbox' || field.type === 'radio') && !field.checked) return;
+                    body.append(field.name, field.value || '');
                   });
+                  if (submitter.name && submitter.value) {
+                    body.append(submitter.name, submitter.value);
+                  }
 
                   const original = submitter.textContent;
                   submitter.disabled = true;
@@ -1718,7 +1719,7 @@ export async function registerAdminRoutes(app: FastifyInstance) {
                       redirect: 'follow',
                       headers: {
                         accept: 'text/html',
-                        'content-type': 'application/x-www-form-urlencoded;charset=UTF-8',
+                        'Content-Type': 'application/x-www-form-urlencoded',
                       },
                     });
 
