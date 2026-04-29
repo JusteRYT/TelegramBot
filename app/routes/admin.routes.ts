@@ -1490,6 +1490,35 @@ export async function registerAdminRoutes(app: FastifyInstance) {
                 unavailable: 'status-unavailable',
                 error: 'status-error',
               };
+              const noticeMap = {
+                game_created: 'Игра успешно добавлена.',
+                game_deleted: 'Игра удалена.',
+                game_delete_failed: 'Не удалось удалить игру.',
+                user_deleted: 'Пользователь удален.',
+                user_delete_failed: 'Не удалось удалить пользователя.',
+                warning_created: 'Предупреждение добавлено.',
+                warning_updated: 'Предупреждение сохранено.',
+                warning_deleted: 'Предупреждение удалено.',
+                ban_created: 'Бан добавлен.',
+                ban_updated: 'Бан сохранен.',
+                ban_deleted: 'Бан удален.',
+                registration_updated: 'Статус регистрации обновлен.',
+                registration_deleted: 'Регистрация удалена.',
+                username_required: 'Нужно указать username для создания пользователя.',
+                user_create_failed: 'Не удалось создать пользователя.',
+                invalid_game_datetime: 'Некорректная дата игры.',
+                invalid_game_creator: 'Некорректный создатель игры.',
+              };
+              const noticeFromSaved = function (saved, entity) {
+                if (!saved) return '';
+                if (saved === 'game_updated') return 'Игра "' + (entity || 'без названия') + '" сохранена.';
+                if (saved === 'user_updated') return 'Пользователь ' + (entity || '') + ' сохранен.';
+                if (saved === 'user_created') return 'Пользователь ' + (entity || '') + ' добавлен.';
+                if (saved.indexOf('game_create_failed_') === 0) {
+                  return 'Не удалось создать игру: ' + saved.replace('game_create_failed_', '') + '.';
+                }
+                return noticeMap[saved] || saved;
+              };
               const showToast = function (text, type) {
                 if (!toastWrap || !text) return;
                 const el = document.createElement('div');
@@ -1652,6 +1681,63 @@ export async function registerAdminRoutes(app: FastifyInstance) {
                       submitButton.disabled = false;
                       submitButton.textContent = originalText || 'Готово';
                     }
+                  }
+                });
+              });
+
+              document.querySelectorAll('form').forEach(function (form) {
+                if (form.classList.contains('js-bot-control')) return;
+                form.addEventListener('submit', async function (event) {
+                  if (event.defaultPrevented) return;
+                  const submitter = event.submitter;
+                  if (!submitter || submitter.tagName !== 'BUTTON') return;
+                  event.preventDefault();
+
+                  const action = submitter.getAttribute('formaction') || form.getAttribute('action') || window.location.pathname;
+                  const method = (submitter.getAttribute('formmethod') || form.getAttribute('method') || 'post').toUpperCase();
+                  const body = new FormData(form);
+                  if (submitter.name && submitter.value) {
+                    body.append(submitter.name, submitter.value);
+                  }
+
+                  const original = submitter.textContent;
+                  submitter.disabled = true;
+                  submitter.textContent = 'Сохраняем...';
+                  try {
+                    const response = await fetch(action, {
+                      method,
+                      body,
+                      redirect: 'follow',
+                      headers: { accept: 'text/html' },
+                    });
+
+                    const url = new URL(response.url, window.location.origin);
+                    const saved = url.searchParams.get('saved') || '';
+                    const entity = url.searchParams.get('entity') || '';
+                    const message = noticeFromSaved(saved, entity) || 'Готово.';
+                    const success = response.ok && !!saved && !saved.includes('failed');
+                    showToast(message, success ? 'ok' : 'err');
+
+                    if (success) {
+                      const modal = form.closest('.modal-overlay');
+                      if (modal && modal.classList.contains('open')) {
+                        modal.classList.remove('open');
+                        modal.setAttribute('aria-hidden', 'true');
+                      }
+                      if (saved.endsWith('_deleted')) {
+                        const item = form.closest('.game-item, .entity-item');
+                        if (item) item.remove();
+                        if (modal && modal.id) {
+                          const linked = document.querySelector('.modal-overlay#' + CSS.escape(modal.id));
+                          if (linked) linked.remove();
+                        }
+                      }
+                    }
+                  } catch (_error) {
+                    showToast('Ошибка сети при сохранении.', 'err');
+                  } finally {
+                    submitter.disabled = false;
+                    submitter.textContent = original || 'Сохранить';
                   }
                 });
               });
