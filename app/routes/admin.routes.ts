@@ -468,7 +468,11 @@ export async function registerAdminRoutes(app: FastifyInstance) {
     }
 
     const result = await botControl.runAction(action as 'start' | 'stop' | 'restart' | 'update');
-    const savedCode = result.ok ? `bot_${action}_ok` : `bot_${action}_failed`;
+    const savedCode = result.message === 'NO_UPDATES'
+      ? 'bot_update_no_changes'
+      : result.ok
+        ? `bot_${action}_ok`
+        : `bot_${action}_failed`;
 
     if (request.headers.accept?.includes('application/json')) {
       reply.send({
@@ -1972,6 +1976,7 @@ function formatAdminNotice(saved?: string, entity?: string) {
     bot_stop_ok: 'Остановка бота выполнена.',
     bot_restart_ok: 'Перезапуск бота выполнен.',
     bot_update_ok: 'Обновление запущено. Проверь статус через несколько секунд.',
+    bot_update_no_changes: 'У вас уже последняя версия, обновление не требуется.',
     bot_start_failed: 'Не удалось запустить бота.',
     bot_stop_failed: 'Не удалось остановить бота.',
     bot_restart_failed: 'Не удалось перезапустить бота.',
