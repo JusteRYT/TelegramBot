@@ -3,6 +3,7 @@ import type { BotContextLike, CreateWizardState } from '../bot/types';
 import { AnnouncementService } from './announcement.service';
 import { BotSessionService } from './bot-session.service';
 import { GameService } from './game.service';
+import { parseMoscowDateTime } from '../utils/moscow-time';
 
 export class CreateGameFlowService {
   constructor(
@@ -382,18 +383,14 @@ export class CreateGameFlowService {
     const { day, month } = parsedDate;
     const { hours, minutes } = parsedTime;
     const year = new Date().getFullYear();
-    const date = new Date(year, month - 1, day, hours, minutes, 0, 0);
-    if (
-      date.getFullYear() !== year ||
-      date.getMonth() !== month - 1 ||
-      date.getDate() !== day ||
-      date.getHours() !== hours ||
-      date.getMinutes() !== minutes
-    ) {
+    const iso = parseMoscowDateTime(
+      `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}T${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`,
+    );
+    if (!iso) {
       return null;
     }
 
-    return date.toISOString().replace('T', ' ').slice(0, 16);
+    return iso;
   }
 
   private parseDateInput(input: string) {

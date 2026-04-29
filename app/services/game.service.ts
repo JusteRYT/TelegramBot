@@ -1,6 +1,7 @@
 import { env } from '../config/env';
 import { GameRepository, type GameRecord } from '../repositories/game.repository';
 import { RegistrationRepository } from '../repositories/registration.repository';
+import { formatMoscowDate, formatMoscowTime, parseMoscowDateTime } from '../utils/moscow-time';
 
 const supportedTypes = new Set(['DND', 'MAFIA', 'OTHER']);
 const numberEmojis = ['1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '6️⃣', '7️⃣', '8️⃣', '9️⃣', '🔟'];
@@ -29,8 +30,8 @@ export class GameService {
       return { ok: false as const, reason: 'INVALID_TYPE' };
     }
 
-    const startsAt = new Date(payload.startsAtInput.replace(' ', 'T'));
-    if (Number.isNaN(startsAt.getTime())) {
+    const startsAt = parseMoscowDateTime(payload.startsAtInput);
+    if (!startsAt) {
       return { ok: false as const, reason: 'INVALID_DATE' };
     }
 
@@ -42,7 +43,7 @@ export class GameService {
       type,
       title: payload.title.trim(),
       description: payload.description?.trim() || null,
-      startsAt: startsAt.toISOString(),
+      startsAt,
       gmName: payload.gmName ?? null,
       registrationLimit: payload.registrationLimit,
       participantSlotsText: payload.participantSlotsText ?? this.buildParticipantSlotsText(payload.registrationLimit),
@@ -367,16 +368,11 @@ export class GameService {
   }
 
   private formatDate(value: Date) {
-    const day = String(value.getDate()).padStart(2, '0');
-    const month = String(value.getMonth() + 1).padStart(2, '0');
-    const year = value.getFullYear();
-    return `${day}.${month}.${year}`;
+    return formatMoscowDate(value);
   }
 
   private formatTime(value: Date) {
-    const hours = String(value.getHours()).padStart(2, '0');
-    const minutes = String(value.getMinutes()).padStart(2, '0');
-    return `${hours}:${minutes}`;
+    return formatMoscowTime(value);
   }
 
   private channelBaseUrl() {

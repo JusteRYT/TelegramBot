@@ -8,6 +8,7 @@ import { AnnouncementService } from '../services/announcement.service';
 import { AuthService } from '../services/auth.service';
 import { BotControlService } from '../services/bot-control.service';
 import { GameService } from '../services/game.service';
+import { parseMoscowDateTime, toMoscowDateTimeLocal } from '../utils/moscow-time';
 
 const auth = new AuthService();
 const users = new UserRepository();
@@ -1551,6 +1552,57 @@ export async function registerAdminRoutes(app: FastifyInstance) {
                   }
                 } catch (_error) {}
               };
+              const refreshAdminContent = async function () {
+                try {
+                  const response = await fetch('/admin', {
+                    headers: { accept: 'text/html' },
+                  });
+                  if (!response.ok) return;
+                  const html = await response.text();
+                  const parsed = new DOMParser().parseFromString(html, 'text/html');
+                  ['gamesList', 'usersList', 'warningsList', 'bansList', 'registrationsList'].forEach(function (id) {
+                    const current = document.getElementById(id);
+                    const next = parsed.getElementById(id);
+                    if (current && next) {
+                      current.innerHTML = next.innerHTML;
+                    }
+                  });
+                  attachModalHandlers(document);
+                } catch (_error) {}
+              };
+              const attachModalHandlers = function (rootNode) {
+                rootNode.querySelectorAll('[data-open-modal]').forEach(function (btn) {
+                  if (btn.dataset.boundOpen === '1') return;
+                  btn.dataset.boundOpen = '1';
+                  btn.addEventListener('click', function () {
+                    const modalId = btn.getAttribute('data-open-modal');
+                    if (!modalId) return;
+                    const modal = document.getElementById(modalId);
+                    if (!modal) return;
+                    modal.classList.add('open');
+                    modal.setAttribute('aria-hidden', 'false');
+                    const firstInput = modal.querySelector('input:not([disabled]), select:not([disabled]), textarea:not([disabled])');
+                    if (firstInput) {
+                      setTimeout(function () {
+                        firstInput.focus();
+                      }, 0);
+                    }
+                  });
+                });
+
+                rootNode.querySelectorAll('[data-close-modal]').forEach(function (btn) {
+                  if (btn.dataset.boundClose === '1') return;
+                  btn.dataset.boundClose = '1';
+                  btn.addEventListener('click', function () {
+                    const modalId = btn.getAttribute('data-close-modal');
+                    if (!modalId) return;
+                    const modal = document.getElementById(modalId);
+                    if (!modal) return;
+                    modal.classList.remove('open');
+                    modal.setAttribute('aria-hidden', 'true');
+                  });
+                });
+              };
 
               if (initialNotice) {
                 showToast(initialNotice, 'ok');
@@ -1586,33 +1638,7 @@ export async function registerAdminRoutes(app: FastifyInstance) {
                 });
               }
 
-              document.querySelectorAll('[data-open-modal]').forEach(function (btn) {
-                btn.addEventListener('click', function () {
-                  const modalId = btn.getAttribute('data-open-modal');
-                  if (!modalId) return;
-                  const modal = document.getElementById(modalId);
-                  if (!modal) return;
-                  modal.classList.add('open');
-                  modal.setAttribute('aria-hidden', 'false');
-                  const firstInput = modal.querySelector('input:not([disabled]), select:not([disabled]), textarea:not([disabled])');
-                  if (firstInput) {
-                    setTimeout(function () {
-                      firstInput.focus();
-                    }, 0);
-                  }
-                });
-              });
-
-              document.querySelectorAll('[data-close-modal]').forEach(function (btn) {
-                btn.addEventListener('click', function () {
-                  const modalId = btn.getAttribute('data-close-modal');
-                  if (!modalId) return;
-                  const modal = document.getElementById(modalId);
-                  if (!modal) return;
-                  modal.classList.remove('open');
-                  modal.setAttribute('aria-hidden', 'true');
-                });
-              });
+              attachModalHandlers(document);
 
               document.querySelectorAll('.modal-overlay').forEach(function (overlay) {
                 overlay.addEventListener('click', function (event) {
@@ -1743,6 +1769,8 @@ export async function registerAdminRoutes(app: FastifyInstance) {
                           const linked = document.querySelector('.modal-overlay#' + CSS.escape(modal.id));
                           if (linked) linked.remove();
                         }
+                      } else {
+                        await refreshAdminContent();
                       }
                     }
                   } catch (_error) {
@@ -1765,30 +1793,11 @@ export async function registerAdminRoutes(app: FastifyInstance) {
 }
 
 function parseDateTimeLocal(value?: string) {
-  if (!value) {
-    return null;
-  }
-
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) {
-    return null;
-  }
-
-  return date.toISOString();
+  return parseMoscowDateTime(value);
 }
 
 function toDateTimeLocal(value: string) {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) {
-    return '';
-  }
-
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  const hours = String(date.getHours()).padStart(2, '0');
-  const minutes = String(date.getMinutes()).padStart(2, '0');
-  return `${year}-${month}-${day}T${hours}:${minutes}`;
+  return toMoscowDateTimeLocal(value);
 }
 
 function formatHumanDate(value: string) {

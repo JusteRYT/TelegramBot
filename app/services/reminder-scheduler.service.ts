@@ -1,6 +1,7 @@
 import { Bot } from 'grammy';
 
 import { env } from '../config/env';
+import { formatMoscowDate, formatMoscowTime } from '../utils/moscow-time';
 
 import { AnnouncementService } from './announcement.service';
 import { ExternalValidationService } from './external-validation.service';
@@ -207,11 +208,11 @@ export class ReminderSchedulerService {
   }
 
   private formatDate(date: Date) {
-    return `${String(date.getDate()).padStart(2, '0')}.${String(date.getMonth() + 1).padStart(2, '0')}.${date.getFullYear()}`;
+    return formatMoscowDate(date);
   }
 
   private formatTime(date: Date) {
-    return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+    return formatMoscowTime(date);
   }
 
   private channelBaseUrl() {

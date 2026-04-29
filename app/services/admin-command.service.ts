@@ -7,6 +7,7 @@ import type {
   WizardState,
 } from '../bot/types';
 import { env } from '../config/env';
+import { formatMoscowDate, formatMoscowTime, parseMoscowDateTime, toMoscowDateTimeLocal } from '../utils/moscow-time';
 
 import { AnnouncementService } from './announcement.service';
 import { BotSessionService } from './bot-session.service';
@@ -724,16 +725,11 @@ export class AdminCommandService {
   }
 
   private formatDate(value: Date) {
-    const day = String(value.getDate()).padStart(2, '0');
-    const month = String(value.getMonth() + 1).padStart(2, '0');
-    const year = value.getFullYear();
-    return `${day}.${month}.${year}`;
+    return formatMoscowDate(value);
   }
 
   private formatTime(value: Date) {
-    const hours = String(value.getHours()).padStart(2, '0');
-    const minutes = String(value.getMinutes()).padStart(2, '0');
-    return `${hours}:${minutes}`;
+    return formatMoscowTime(value);
   }
 
   private async handleEditInput(ctx: BotContextLike, state: EditInputValueState) {
@@ -830,7 +826,7 @@ export class AdminCommandService {
     ];
 
     const dateTime = new Date(game.starts_at);
-    const formatted = `${String(dateTime.getDate()).padStart(2, '0')}.${String(dateTime.getMonth() + 1).padStart(2, '0')}.${dateTime.getFullYear()} ${String(dateTime.getHours()).padStart(2, '0')}:${String(dateTime.getMinutes()).padStart(2, '0')}`;
+    const formatted = `${this.formatDate(dateTime)} ${this.formatTime(dateTime)}`;
 
     await ctx.reply(
       `🛠 <b>Редактирование игры #${game.id}</b>\n` +
@@ -870,7 +866,7 @@ export class AdminCommandService {
         return game.registered_players_text || 'пусто';
       case 'datetime': {
         const date = new Date(game.starts_at);
-        return `${String(date.getDate()).padStart(2, '0')}.${String(date.getMonth() + 1).padStart(2, '0')}.${date.getFullYear()} ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+        return `${this.formatDate(date)} ${this.formatTime(date)}`;
       }
     }
   }
@@ -904,19 +900,21 @@ export class AdminCommandService {
   }
 
   private parseEditDateTime(currentStartsAt: string, input: string) {
-    const current = new Date(currentStartsAt);
+    const currentMoscow = toMoscowDateTimeLocal(currentStartsAt);
+    const year = Number.parseInt(currentMoscow.slice(0, 4), 10);
+    const month = Number.parseInt(currentMoscow.slice(5, 7), 10);
+    const day = Number.parseInt(currentMoscow.slice(8, 10), 10);
 
     if (/^\d{1,2}[:.]\d{2}$/.test(input)) {
       const [hours, minutes] = input.replace('.', ':').split(':').map((item) => Number.parseInt(item, 10));
-      current.setHours(hours, minutes, 0, 0);
-      return current.toISOString();
+      return parseMoscowDateTime(`${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}T${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`);
     }
 
     if (/^\d{1,2}\.\d{1,2}\s+\d{1,2}[:.]\d{2}$/.test(input)) {
       const [datePart, timePart] = input.split(/\s+/);
-      const [day, month] = datePart.split('.').map((item) => Number.parseInt(item, 10));
+      const [inputDay, inputMonth] = datePart.split('.').map((item) => Number.parseInt(item, 10));
       const [hours, minutes] = timePart.replace('.', ':').split(':').map((item) => Number.parseInt(item, 10));
-      return new Date(current.getFullYear(), month - 1, day, hours, minutes, 0, 0).toISOString();
+      return parseMoscowDateTime(`${year}-${String(inputMonth).padStart(2, '0')}-${String(inputDay).padStart(2, '0')}T${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`);
     }
 
     return null;

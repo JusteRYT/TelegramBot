@@ -1,6 +1,7 @@
 import { Bot, InlineKeyboard } from 'grammy';
 
 import { env } from '../config/env';
+import { formatMoscowDate, formatMoscowTime } from '../utils/moscow-time';
 
 import { GameService } from './game.service';
 
@@ -168,15 +169,10 @@ export class AnnouncementService {
   }
 
   private formatDate(value: Date) {
-    const day = String(value.getDate()).padStart(2, '0');
-    const month = String(value.getMonth() + 1).padStart(2, '0');
-    const year = value.getFullYear();
-    return `${day}.${month}.${year}`;
+    return formatMoscowDate(value);
   }
 
   private formatTime(value: Date) {
-    const hours = String(value.getHours()).padStart(2, '0');
-    const minutes = String(value.getMinutes()).padStart(2, '0');
-    return `${hours}:${minutes}`;
+    return formatMoscowTime(value);
   }
 }
