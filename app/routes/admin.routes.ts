@@ -1699,10 +1699,14 @@ export async function registerAdminRoutes(app: FastifyInstance) {
 
                   const action = submitter.getAttribute('formaction') || form.getAttribute('action') || window.location.pathname;
                   const method = (submitter.getAttribute('formmethod') || form.getAttribute('method') || 'post').toUpperCase();
-                  const body = new FormData(form);
+                  const formData = new FormData(form);
                   if (submitter.name && submitter.value) {
-                    body.append(submitter.name, submitter.value);
+                    formData.append(submitter.name, submitter.value);
                   }
+                  const body = new URLSearchParams();
+                  formData.forEach(function (value, key) {
+                    body.append(key, String(value));
+                  });
 
                   const original = submitter.textContent;
                   submitter.disabled = true;
@@ -1710,9 +1714,12 @@ export async function registerAdminRoutes(app: FastifyInstance) {
                   try {
                     const response = await fetch(action, {
                       method,
-                      body,
+                      body: body.toString(),
                       redirect: 'follow',
-                      headers: { accept: 'text/html' },
+                      headers: {
+                        accept: 'text/html',
+                        'content-type': 'application/x-www-form-urlencoded;charset=UTF-8',
+                      },
                     });
 
                     const url = new URL(response.url, window.location.origin);
