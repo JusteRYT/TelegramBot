@@ -1,7 +1,7 @@
 import { Bot } from 'grammy';
 
 import { env } from '../config/env';
-import { formatMoscowDate, formatMoscowTime } from '../utils/moscow-time';
+import { formatMoscowDate, formatMoscowTime, storedMoscowDateTimeToInstant } from '../utils/moscow-time';
 
 import { AnnouncementService } from './announcement.service';
 import { ExternalValidationService } from './external-validation.service';
@@ -52,7 +52,10 @@ export class ReminderSchedulerService {
     const now = new Date();
 
     for (const game of games) {
-      const startsAt = new Date(game.starts_at);
+      const startsAt = storedMoscowDateTimeToInstant(game.starts_at);
+      if (!startsAt) {
+        continue;
+      }
       const diffMinutes = Math.round((startsAt.getTime() - now.getTime()) / (1000 * 60));
       const diffHours = diffMinutes / 60;
 

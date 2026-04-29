@@ -1,14 +1,11 @@
 const MSK_OFFSET_MINUTES = 3 * 60;
 
+// Project convention: game starts_at stores Moscow wall-clock time in ISO-like UTC fields.
+// Example: "2026-04-29T18:00:00.000Z" means 18:00 MSK for users, not 21:00 MSK.
 export function parseMoscowDateTime(value?: string | null) {
   const normalized = (value ?? '').trim();
   if (!normalized) {
     return null;
-  }
-
-  if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2}(?:\.\d{3})?)?(?:Z|[+-]\d{2}:\d{2})$/.test(normalized)) {
-    const date = new Date(normalized);
-    return Number.isNaN(date.getTime()) ? null : date.toISOString();
   }
 
   const match = normalized.match(/^(\d{4})-(\d{2})-(\d{2})(?:T| )(\d{2}):(\d{2})(?::(\d{2}))?/);
@@ -39,14 +36,14 @@ export function parseMoscowDateTime(value?: string | null) {
     return null;
   }
 
-  const utcMs = Date.UTC(year, month - 1, day, hours, minutes - MSK_OFFSET_MINUTES, seconds, 0);
+  const utcMs = Date.UTC(year, month - 1, day, hours, minutes, seconds, 0);
   const date = new Date(utcMs);
   if (
-    getMoscowPart(date, 'year') !== year ||
-    getMoscowPart(date, 'month') !== month ||
-    getMoscowPart(date, 'day') !== day ||
-    getMoscowPart(date, 'hour') !== hours ||
-    getMoscowPart(date, 'minute') !== minutes
+    date.getUTCFullYear() !== year ||
+    date.getUTCMonth() !== month - 1 ||
+    date.getUTCDate() !== day ||
+    date.getUTCHours() !== hours ||
+    date.getUTCMinutes() !== minutes
   ) {
     return null;
   }
@@ -64,37 +61,42 @@ export function toMoscowDateTimeLocal(value: string | null | undefined) {
     return '';
   }
 
-  const year = String(getMoscowPart(date, 'year')).padStart(4, '0');
-  const month = String(getMoscowPart(date, 'month')).padStart(2, '0');
-  const day = String(getMoscowPart(date, 'day')).padStart(2, '0');
-  const hours = String(getMoscowPart(date, 'hour')).padStart(2, '0');
-  const minutes = String(getMoscowPart(date, 'minute')).padStart(2, '0');
+  const year = String(date.getUTCFullYear()).padStart(4, '0');
+  const month = String(date.getUTCMonth() + 1).padStart(2, '0');
+  const day = String(date.getUTCDate()).padStart(2, '0');
+  const hours = String(date.getUTCHours()).padStart(2, '0');
+  const minutes = String(date.getUTCMinutes()).padStart(2, '0');
   return `${year}-${month}-${day}T${hours}:${minutes}`;
 }
 
 export function formatMoscowDate(date: Date) {
-  const day = String(getMoscowPart(date, 'day')).padStart(2, '0');
-  const month = String(getMoscowPart(date, 'month')).padStart(2, '0');
-  const year = getMoscowPart(date, 'year');
+  const day = String(date.getUTCDate()).padStart(2, '0');
+  const month = String(date.getUTCMonth() + 1).padStart(2, '0');
+  const year = date.getUTCFullYear();
   return `${day}.${month}.${year}`;
 }
 
 export function formatMoscowTime(date: Date) {
-  const hours = String(getMoscowPart(date, 'hour')).padStart(2, '0');
-  const minutes = String(getMoscowPart(date, 'minute')).padStart(2, '0');
+  const hours = String(date.getUTCHours()).padStart(2, '0');
+  const minutes = String(date.getUTCMinutes()).padStart(2, '0');
   return `${hours}:${minutes}`;
 }
 
-function getMoscowPart(date: Date, type: 'year' | 'month' | 'day' | 'hour' | 'minute') {
-  const parts = new Intl.DateTimeFormat('en-CA', {
-    timeZone: 'Europe/Moscow',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: false,
-  }).formatToParts(date);
+export function storedMoscowDateTimeToInstant(value: string) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return null;
+  }
 
-  return Number.parseInt(parts.find((item) => item.type === type)?.value ?? '0', 10);
+  return new Date(
+    Date.UTC(
+      date.getUTCFullYear(),
+      date.getUTCMonth(),
+      date.getUTCDate(),
+      date.getUTCHours(),
+      date.getUTCMinutes() - MSK_OFFSET_MINUTES,
+      date.getUTCSeconds(),
+      date.getUTCMilliseconds(),
+    ),
+  );
 }

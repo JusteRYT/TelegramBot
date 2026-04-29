@@ -1,7 +1,7 @@
 import { env } from '../config/env';
 import { GameRepository, type GameRecord } from '../repositories/game.repository';
 import { RegistrationRepository } from '../repositories/registration.repository';
-import { formatMoscowDate, formatMoscowTime, parseMoscowDateTime } from '../utils/moscow-time';
+import { formatMoscowDate, formatMoscowTime, parseMoscowDateTime, storedMoscowDateTimeToInstant } from '../utils/moscow-time';
 
 const supportedTypes = new Set(['DND', 'MAFIA', 'OTHER']);
 const numberEmojis = ['1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '6️⃣', '7️⃣', '8️⃣', '9️⃣', '🔟'];
@@ -158,7 +158,10 @@ export class GameService {
       .listAll()
       .filter((game) => ['OPEN', 'FULL'].includes(game.status))
       .filter((game) => {
-        const date = new Date(game.starts_at);
+        const date = storedMoscowDateTimeToInstant(game.starts_at);
+        if (!date) {
+          return false;
+        }
         return date >= now && date <= horizon;
       })
       .map((game) => this.formatUpcomingSnippet(game));
